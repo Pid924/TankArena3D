@@ -127,4 +127,24 @@ static func symbol(type: String, u: float, v: float) -> Color:
 				var wy := -0.3 - k * 0.38 + sin(u * 6.0 + k * 1.5) * 0.1
 				if absf(v - wy) < 0.09 and absf(u) < 0.95:
 					return Color(0.55, 0.85, 1.0)
+		"speed":
+			# lightning bolt
+			var bolt := PackedVector2Array([Vector2(0.15, 0.95), Vector2(-0.55, -0.05), Vector2(-0.05, -0.05), Vector2(-0.2, -0.95), Vector2(0.55, 0.1), Vector2(0.05, 0.1)])
+			if Geometry2D.is_point_in_polygon(p, bolt):
+				var inner := PackedVector2Array()
+				for q in bolt:
+					inner.append(q * 0.78 + Vector2(0.0, 0.0))
+				return Color(1.0, 0.95, 0.35) if Geometry2D.is_point_in_polygon(p, inner) else Color(0.85, 0.4, 0.0)
+		"slow":
+			# hourglass
+			if absf(v) > 0.78 and absf(v) < 0.95 and absf(u) < 0.62:
+				return Color(0.75, 0.55, 0.3)
+			var half := absf(v)
+			if half <= 0.78 and absf(u) < 0.08 + half * 0.6:
+				var sand := (v < -0.25 and absf(u) < 0.06 + half * 0.55) or (v > 0.0 and v < 0.35 and absf(u) < 0.06 + half * 0.55) or (absf(u) < 0.04 and v < 0.0)
+				if sand:
+					return Color(1.0, 0.8, 0.35)
+				if absf(u) > half * 0.6 - 0.02:
+					return white
+				return Color(0.75, 0.9, 1.0, 1.0)
 	return Color(0, 0, 0, 0)

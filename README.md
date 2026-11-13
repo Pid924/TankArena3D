@@ -5,43 +5,58 @@ Everything (tanks, walls, effects, textures) is generated in code from primitive
 
 ## How to play
 
-- **Move:** WASD or arrow keys (gamepad left stick works too)
-- **Fire:** Space or J (gamepad A)
-- **Touch:** drag on the left half of the screen to move, hold the right half to fire
-- On the title screen, press **Enter** to start or **1-3** to jump to a level.
+Five levels, 20 enemy tanks each. Each player can take **3 hits**. Before every level a briefing screen shows which enemies are coming and what they do.
+The menu has 1-player and 2-player modes, a start-level picker and four languages (Thai, English, German, Dutch).
 
-Destroy all 20 enemy tanks in each arena. You can take **3 hits**; the third one ends the game.
-Flashing red tanks drop an item when you hit them.
+| | Player 1 | Player 2 |
+|---|---|---|
+| Move | WASD | Arrow keys |
+| Fire | Space / J | Enter / Right Ctrl / Numpad 0 |
+| Gamepad | first pad | second pad |
+
+In 1-player mode both key sets control the same tank, and on touch screens you drag on the left half to move and hold the right half to fire.
+Every item affects both players.
 
 ### Terrain
 | Tile | Effect |
 |---|---|
 | Brick | Breaks after 2 hits (1 hit at weapon level 3) |
 | Steel | Only breakable at weapon level 3 |
-| Water | Blocks tanks, bullets fly over |
+| Water | Blocks tanks (bullets fly over). With the amphibious item you can escape across it |
 | Bush | Hides you: enemies cannot target you |
 | Ice | Slippery, hard to stop |
 | High ground + ramps | Bullets from below hit the cliff; you can shoot down from above |
 
 ### Enemies
-Basic (grey), Fast (orange), Heavy (purple, 4 HP), Artillery (brown, lobs shells over walls at your position: watch for the red circle), Stealth (nearly invisible, hidden from the minimap without radar).
+| Enemy | Ability |
+|---|---|
+| Scout (grey) | Drives around and shoots |
+| Racer (orange) | Very fast, fast bullets |
+| Bulwark (purple) | Slow, 4 HP |
+| Mortar (brown) | Lobs shells over walls at your position (red circle) |
+| Ghost (dark blue) | Nearly invisible, hidden from the minimap without radar |
+| Hovercraft (teal) | Crosses water |
+| Mine Layer (olive) | Drops visible landmines that last 8 s; driving over one costs 1 HP |
+| Thief (pink) | Drives to items and steals them; a stolen item has the opposite effect on you |
+
+Tanks #3, 7, 11, 15 and 19 flash red and drop an item when hit. Later tanks in each wave have more HP (+1 from #8, +2 from #15, +1 more in levels 4 and 5).
 
 ### Items
-Items appear as round picture badges (drawn in code, also shown on the minimap).
-
-| Icon | Item |
-|---|---|
-| Gold star | Weapon upgrade: Lv1 faster shots, Lv2 two shots at once, Lv3 breaks steel |
-| Blue shield | Shield for 10 s |
-| Red heart | One extra HP (max 5) |
-| Snowflake | Freezes all enemies for 8 s |
-| Bomb | Destroys every enemy on the field |
-| Tank on waves | Amphibious for 15 s: drive across water (a float ring appears; it never runs out while you are still on water) |
-| Radar | Radar for 15 s: reveals stealth tanks on screen and minimap |
+| Icon | Item | If a thief steals it |
+|---|---|---|
+| Gold star | Weapon upgrade: Lv1 faster shots, Lv2 two shots, Lv3 breaks steel | Weapon level -1 |
+| Blue shield | Shield 10 s | Enemies shielded 8 s |
+| Red heart | +1 HP (max 5) | Every enemy +1 HP |
+| Snowflake | Enemies frozen 8 s | You are frozen 3 s |
+| Bomb | Destroys all enemies on the field | The blast hits you |
+| Tank on waves | Drive across water 15 s | Enemies cross water 12 s |
+| Radar | Reveals stealth tanks 15 s | Minimap jammed 12 s |
+| Lightning | Speed boost 10 s | Enemies faster 10 s |
+| Hourglass | Enemies slowed 10 s | You are slowed 6 s |
 
 ## Development
 
-Open the folder in Godot 4.3 and press F5. Levels are text maps at the top of `scripts/main.gd` (legend in the comments), so adding a level means adding a new entry to `LEVELS`.
+Open the folder in Godot 4.3 and press F5. Levels are text maps at the top of `scripts/main.gd` (legend in the comments), so adding a level means adding a new entry to `LEVELS` and a `lv_N` name in `scripts/i18n.gd`. All game text lives in `scripts/i18n.gd`. Thai text uses Noto Sans Thai (`fonts/`, SIL Open Font License).
 
 Run the headless smoke test:
 

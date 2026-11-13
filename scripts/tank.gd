@@ -3,11 +3,30 @@ extends CharacterBody3D
 
 const GRAVITY := 22.0
 const DIRS := [Vector3(1, 0, 0), Vector3(-1, 0, 0), Vector3(0, 0, 1), Vector3(0, 0, -1)]
+const WATER_LAYER := 8
+
+const KIND_COLORS := {
+	"player1": Color(0.22, 0.78, 0.56),
+	"player2": Color(0.35, 0.55, 1.0),
+	"basic": Color(0.78, 0.74, 0.68),
+	"fast": Color(0.96, 0.55, 0.16),
+	"heavy": Color(0.5, 0.36, 0.68),
+	"artillery": Color(0.62, 0.48, 0.26),
+	"stealth": Color(0.18, 0.24, 0.4),
+	"hover": Color(0.2, 0.75, 0.8),
+	"miner": Color(0.45, 0.5, 0.2),
+	"thief": Color(0.95, 0.35, 0.7),
+}
+const KIND_HP := {"basic": 1, "fast": 1, "heavy": 4, "artillery": 2, "stealth": 1, "hover": 2, "miner": 2, "thief": 1}
+const KIND_SPEED := {"basic": 3.0, "fast": 5.3, "heavy": 2.0, "artillery": 1.8, "stealth": 3.6, "hover": 3.4, "miner": 2.8, "thief": 4.2}
+const KIND_SCORE := {"basic": 100, "fast": 200, "heavy": 400, "artillery": 300, "stealth": 300, "hover": 250, "miner": 250, "thief": 300}
 
 var main = null
 var is_player := false
+var player_idx := 0
 var kind := "basic"
 var hp := 1
+var max_hp := 1
 var speed := 3.0
 var bullet_speed := 11.0
 var facing := Vector3(0, 0, 1)
@@ -18,6 +37,7 @@ var fire_cd := 0.0
 var weapon := 0
 var my_bullets: Array = []
 var dead := false
+var water_pass := false
 
 # AI state
 var ai_dir := Vector3(0, 0, 1)
@@ -26,6 +46,7 @@ var ai_fire := 1.5
 var stuck_t := 0.0
 var art_timer := 2.5
 var art_pause := 0.0
+var mine_timer := 2.5
 var reveal_t := 0.0
 var flash_t := 0.0
 var alpha := 1.0
@@ -40,12 +61,13 @@ var shield_mesh: MeshInstance3D
 var floater: MeshInstance3D
 
 
-func setup(m, player: bool, k: String) -> void:
+func setup(m, player: bool, k: String, idx := 0) -> void:
 	main = m
 	is_player = player
+	player_idx = idx
 	kind = k
 	collision_layer = 4
-	collision_mask = 1 | 2 | 4 | 8
+	collision_mask = 1 | 2 | 4 | WATER_LAYER
 	floor_max_angle = deg_to_rad(50.0)
 	floor_snap_length = 0.3
 	var cs := CollisionShape3D.new()
@@ -55,39 +77,25 @@ func setup(m, player: bool, k: String) -> void:
 	cs.position.y = 0.42
 	add_child(cs)
 	set_meta("tank", true)
-	match kind:
-		"player":
-			hp = 3
-			speed = 4.6
-			base_color = Color(0.22, 0.78, 0.56)
-			facing = Vector3(0, 0, -1)
-		"basic":
-			hp = 1
-			speed = 3.0
-			base_color = Color(0.78, 0.74, 0.68)
-			score_value = 100
-		"fast":
-			hp = 1
-			speed = 5.3
+	if is_player:
+		hp = 3
+		speed = 4.6
+		base_color = KIND_COLORS["player%d" % (idx + 1)]
+		facing = Vector3(0, 0, -1)
+	else:
+		hp = KIND_HP[kind]
+		speed = KIND_SPEED[kind]
+		base_color = KIND_COLORS[kind]
+		score_value = KIND_SCORE[kind]
+		if kind == "fast":
 			bullet_speed = 14.0
-			base_color = Color(0.96, 0.55, 0.16)
-			score_value = 200
-		"heavy":
-			hp = 4
-			speed = 2.0
-			base_color = Color(0.5, 0.36, 0.68)
-			score_value = 400
-		"artillery":
-			hp = 2
-			speed = 1.8
-			base_color = Color(0.62, 0.48, 0.26)
-			score_value = 300
-		"stealth":
-			hp = 1
-			speed = 3.6
-			base_color = Color(0.18, 0.24, 0.4)
-			score_value = 300
+	max_hp = hp
 	build_visual()
+
+
+func set_bonus_hp(bonus: int) -> void:
+	hp += bonus
+	max_hp = hp
 
 
 func mk_mat(c: Color) -> StandardMaterial3D:
@@ -148,6 +156,31 @@ func build_visual() -> void:
 			add_box(Vector3(0.52, 0.16, 0.9), Vector3(0, 0.22, 0), hull_mat)
 			add_box(Vector3(0.36, 0.12, 0.44), Vector3(0, 0.36, 0.05), top_mat, Vector3(0, deg_to_rad(45), 0))
 			add_box(Vector3(0.06, 0.06, 0.5), Vector3(0, 0.36, -0.32), dark_mat)
+		"hover":
+			# inflatable skirt instead of tracks, fan at the back
+			add_box(Vector3(0.84, 0.16, 0.95), Vector3(0, 0.1, 0), track_mat)
+			add_box(Vector3(0.6, 0.2, 0.8), Vector3(0, 0.27, 0), hull_mat)
+			add_box(Vector3(0.36, 0.16, 0.34), Vector3(0, 0.45, 0.0), top_mat)
+			add_box(Vector3(0.08, 0.08, 0.45), Vector3(0, 0.45, -0.32), dark_mat)
+			add_box(Vector3(0.5, 0.36, 0.06), Vector3(0, 0.45, 0.42), dark_mat)
+		"miner":
+			add_box(Vector3(0.2, 0.28, 0.95), Vector3(-0.34, 0.15, 0), track_mat)
+			add_box(Vector3(0.2, 0.28, 0.95), Vector3(0.34, 0.15, 0), track_mat)
+			add_box(Vector3(0.5, 0.28, 0.86), Vector3(0, 0.3, 0), hull_mat)
+			add_box(Vector3(0.36, 0.18, 0.3), Vector3(0, 0.52, -0.1), top_mat)
+			add_box(Vector3(0.08, 0.08, 0.4), Vector3(0, 0.52, -0.38), dark_mat)
+			# mine rack at the back
+			for i in 3:
+				add_box(Vector3(0.14, 0.1, 0.14), Vector3(-0.17 + i * 0.17, 0.5, 0.3), mk_mat(Color(0.9, 0.2, 0.15)))
+		"thief":
+			add_box(Vector3(0.16, 0.22, 0.85), Vector3(-0.32, 0.13, 0), track_mat)
+			add_box(Vector3(0.16, 0.22, 0.85), Vector3(0.32, 0.13, 0), track_mat)
+			add_box(Vector3(0.46, 0.2, 0.8), Vector3(0, 0.25, 0), hull_mat)
+			add_box(Vector3(0.3, 0.16, 0.3), Vector3(0, 0.42, 0.08), top_mat)
+			add_box(Vector3(0.06, 0.06, 0.36), Vector3(0, 0.42, -0.24), dark_mat)
+			# grabber claw
+			add_box(Vector3(0.05, 0.05, 0.3), Vector3(-0.15, 0.25, -0.5), dark_mat)
+			add_box(Vector3(0.05, 0.05, 0.3), Vector3(0.15, 0.25, -0.5), dark_mat)
 		_:
 			add_box(Vector3(0.2, 0.28, 0.95), Vector3(-0.34, 0.15, 0), track_mat)
 			add_box(Vector3(0.2, 0.28, 0.95), Vector3(0.34, 0.15, 0), track_mat)
@@ -155,14 +188,15 @@ func build_visual() -> void:
 			add_box(Vector3(0.42, 0.2, 0.42), Vector3(0, 0.52, 0.05), top_mat)
 			add_box(Vector3(0.1, 0.1, 0.5), Vector3(0, 0.52, -0.36), dark_mat)
 			if is_player:
-				add_box(Vector3(0.2, 0.05, 0.2), Vector3(0, 0.64, 0.05), mk_mat(Color(1.0, 0.85, 0.2)))
+				var flag := Color(1.0, 0.85, 0.2) if player_idx == 0 else Color(1, 1, 1)
+				add_box(Vector3(0.2, 0.05, 0.2), Vector3(0, 0.64, 0.05), mk_mat(flag))
 	shield_mesh = MeshInstance3D.new()
 	var sm := SphereMesh.new()
 	sm.radius = 0.7
 	sm.height = 1.4
 	shield_mesh.mesh = sm
 	var shm := StandardMaterial3D.new()
-	shm.albedo_color = Color(0.4, 0.85, 1.0, 0.28)
+	shm.albedo_color = Color(0.4, 0.85, 1.0, 0.28) if is_player else Color(1.0, 0.35, 0.35, 0.3)
 	shm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	shm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	shield_mesh.material_override = shm
@@ -170,7 +204,7 @@ func build_visual() -> void:
 	shield_mesh.visible = false
 	add_child(shield_mesh)
 	visual.rotation.y = atan2(-facing.x, -facing.z)
-	# float ring shown while the amphibious item is active
+	# float ring shown while a tank drives on water
 	floater = MeshInstance3D.new()
 	var fm := CylinderMesh.new()
 	fm.top_radius = 0.62
@@ -196,6 +230,7 @@ func _physics_process(delta: float) -> void:
 	reveal_t = maxf(0.0, reveal_t - delta)
 	flash_t = maxf(0.0, flash_t - delta)
 	my_bullets = my_bullets.filter(func(b): return is_instance_valid(b))
+	update_water_pass()
 	if is_player:
 		player_update(delta)
 	else:
@@ -205,7 +240,7 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	if not is_player and main.freeze_t <= 0.0 and art_pause <= 0.0:
 		var rv := get_real_velocity()
-		if Vector2(rv.x, rv.z).length() < speed * 0.3:
+		if Vector2(rv.x, rv.z).length() < speed * main.enemy_speed_mult() * 0.3:
 			stuck_t += delta
 			if stuck_t > 0.3:
 				stuck_t = 0.0
@@ -224,19 +259,53 @@ func ground_type() -> String:
 	return main.cells.get(main.cell_of(global_position), ".")
 
 
+func touching_water() -> bool:
+	for off in [Vector3(0.43, 0, 0.43), Vector3(-0.43, 0, 0.43), Vector3(0.43, 0, -0.43), Vector3(-0.43, 0, -0.43)]:
+		if main.cells.get(main.cell_of(global_position + off), ".") == "W":
+			return true
+	return false
+
+
+func update_water_pass() -> void:
+	# Can this tank drive on water right now? Never switch it off while still touching water.
+	if main.can_pass_water(self):
+		water_pass = true
+	elif water_pass and not touching_water():
+		water_pass = false
+	collision_mask = (1 | 2 | 4) if water_pass else (1 | 2 | 4 | WATER_LAYER)
+	floater.visible = water_pass and (kind != "hover") and (not is_player or main.amphibious_t > 3.0 or main.amphibious_t <= 0.0 or fmod(main.amphibious_t, 0.3) < 0.18)
+
+
+func read_move() -> Vector2:
+	var pre := "p%d_" % (player_idx + 1)
+	var v := Vector2(Input.get_axis(pre + "left", pre + "right"), Input.get_axis(pre + "up", pre + "down"))
+	if main.num_players == 1:
+		v += Vector2(Input.get_axis("p2_left", "p2_right"), Input.get_axis("p2_up", "p2_down"))
+		if main.touch_vec.length() > 0.2:
+			v = main.touch_vec
+	return v.limit_length(1.0)
+
+
+func read_fire() -> bool:
+	var pre := "p%d_" % (player_idx + 1)
+	if Input.is_action_pressed(pre + "fire"):
+		return true
+	return main.num_players == 1 and (Input.is_action_pressed("p2_fire") or main.touch_fire)
+
+
 func player_update(delta: float) -> void:
-	var inp := Vector3(Input.get_axis("move_left", "move_right"), 0, Input.get_axis("move_up", "move_down"))
-	if main.touch_vec.length() > 0.2:
-		inp = Vector3(main.touch_vec.x, 0, main.touch_vec.y)
-	if inp.length() > 1.0:
-		inp = inp.normalized()
+	var mv := read_move()
+	if main.player_freeze_t > 0.0:
+		mv = Vector2.ZERO
+	var inp := Vector3(mv.x, 0, mv.y)
 	if inp.length() > 0.15:
 		facing = inp.normalized()
 	var acc := 1.6 if ground_type() == "I" else 16.0
-	var h := Vector3(velocity.x, 0, velocity.z).lerp(inp * speed, minf(1.0, acc * delta))
+	var spd: float = speed * main.player_speed_mult()
+	var h := Vector3(velocity.x, 0, velocity.z).lerp(inp * spd, minf(1.0, acc * delta))
 	velocity.x = h.x
 	velocity.z = h.z
-	if Input.is_action_pressed("fire") or main.touch_fire:
+	if read_fire() and main.player_freeze_t <= 0.0:
 		try_fire()
 
 
@@ -262,8 +331,8 @@ func enemy_update(delta: float) -> void:
 		velocity.x = 0.0
 		velocity.z = 0.0
 		return
-	var pl = main.player
-	var pvis: bool = pl != null and is_instance_valid(pl) and not pl.dead and not main.player_hidden()
+	var pl = main.nearest_visible_player(global_position)
+	var pvis: bool = pl != null
 	if kind == "artillery":
 		art_timer -= delta
 		if art_pause > 0.0:
@@ -282,11 +351,18 @@ func enemy_update(delta: float) -> void:
 				var off := Vector3(randf_range(-0.6, 0.6), 0, randf_range(-0.6, 0.6))
 				main.spawn_shell(self, pl.global_position + pl.velocity * Vector3(0.6, 0, 0.6) + off)
 				return
+	if kind == "miner":
+		mine_timer -= delta
+		if mine_timer <= 0.0:
+			mine_timer = randf_range(2.5, 4.0)
+			main.spawn_mine(global_position - facing * 0.7)
 	ai_timer -= delta
+	if kind == "thief" and not main.items.is_empty() and ai_timer > 0.6:
+		ai_timer = 0.6
 	if ai_timer <= 0.0:
 		choose_dir(false)
 	facing = ai_dir
-	var tv := ai_dir * speed
+	var tv: Vector3 = ai_dir * speed * main.enemy_speed_mult()
 	var acc := 2.0 if ground_type() == "I" else 20.0
 	var h := Vector3(velocity.x, 0, velocity.z).lerp(tv, minf(1.0, acc * delta))
 	velocity.x = h.x
@@ -309,21 +385,31 @@ func enemy_update(delta: float) -> void:
 		if ai_fire <= 0.0:
 			try_fire()
 			ai_fire = randf_range(0.7, 1.8) if kind == "fast" else randf_range(1.0, 2.5)
+			if kind == "thief":
+				ai_fire += 1.5
+
+
+func toward(to: Vector3) -> Vector3:
+	var use_x := absf(to.x) > absf(to.z)
+	if randf() < 0.3:
+		use_x = not use_x
+	if use_x and absf(to.x) > 0.3:
+		return Vector3(signf(to.x), 0, 0)
+	if absf(to.z) > 0.3:
+		return Vector3(0, 0, signf(to.z))
+	if absf(to.x) > 0.3:
+		return Vector3(signf(to.x), 0, 0)
+	return DIRS[randi() % 4]
 
 
 func choose_dir(stuck: bool) -> void:
-	var pl = main.player
-	var pvis: bool = pl != null and is_instance_valid(pl) and not pl.dead and not main.player_hidden()
+	var pl = main.nearest_visible_player(global_position)
 	var choice: Vector3 = DIRS[randi() % 4]
-	if pvis and randf() < 0.5:
-		var to: Vector3 = pl.global_position - global_position
-		var use_x := absf(to.x) > absf(to.z)
-		if randf() < 0.3:
-			use_x = not use_x
-		if use_x and absf(to.x) > 0.3:
-			choice = Vector3(signf(to.x), 0, 0)
-		elif absf(to.z) > 0.3:
-			choice = Vector3(0, 0, signf(to.z))
+	var item = main.nearest_item(global_position) if kind == "thief" else null
+	if item != null and randf() < 0.85:
+		choice = toward(item.global_position - global_position)
+	elif pl != null and randf() < 0.5:
+		choice = toward(pl.global_position - global_position)
 	elif randf() < 0.3:
 		choice = Vector3(0, 0, 1)
 	if stuck and choice.is_equal_approx(ai_dir):
@@ -340,11 +426,14 @@ func take_hit(power: int) -> void:
 			return
 		hp -= 1
 		invuln = 1.6
-		main.on_player_hit()
+		main.on_player_hit(self)
 		if hp <= 0:
 			die()
 	else:
 		reveal_t = 1.0
+		if main.enemy_shield_t > 0.0:
+			flash_t = 0.05
+			return
 		flash_t = 0.12
 		if carrier:
 			carrier = false
@@ -353,7 +442,7 @@ func take_hit(power: int) -> void:
 		if hp <= 0:
 			die()
 		elif kind == "heavy":
-			hull_mat.albedo_color = base_color.lerp(Color(0.95, 0.3, 0.3), (4.0 - hp) / 4.0)
+			hull_mat.albedo_color = base_color.lerp(Color(0.95, 0.3, 0.3), 1.0 - float(hp) / max_hp)
 
 
 func die() -> void:
@@ -367,7 +456,9 @@ func die() -> void:
 func update_visual(delta: float) -> void:
 	var target := atan2(-facing.x, -facing.z)
 	visual.rotation.y = lerp_angle(visual.rotation.y, target, minf(1.0, 14.0 * delta))
-	shield_mesh.visible = shield > 0.0
+	if kind == "hover":
+		visual.position.y = 0.04 + sin(Time.get_ticks_msec() / 150.0) * 0.03
+	shield_mesh.visible = shield > 0.0 or (not is_player and main.enemy_shield_t > 0.0)
 	if is_player:
 		visual.visible = invuln <= 0.0 or fmod(invuln, 0.2) < 0.12
 	var em := Color.BLACK
@@ -378,11 +469,12 @@ func update_visual(delta: float) -> void:
 		em = Color(1.0, 0.15, 0.15) if fmod(t, 0.3) < 0.15 else Color.BLACK
 	elif main.freeze_t > 0.0 and not is_player:
 		em = Color(0.35, 0.55, 0.8)
+	elif is_player and main.player_freeze_t > 0.0:
+		em = Color(0.35, 0.55, 0.8)
 	hull_mat.emission = em
 	if kind == "stealth":
 		var want := 0.07
-		var pl = main.player
-		var near: bool = pl != null and is_instance_valid(pl) and pl.global_position.distance_to(global_position) < 2.5
+		var near: bool = main.nearest_player_dist(global_position) < 2.5
 		if reveal_t > 0.0 or main.radar_t > 0.0 or near:
 			want = 1.0 if main.radar_t <= 0.0 or reveal_t > 0.0 or near else 0.6
 		alpha = lerpf(alpha, want, minf(1.0, 6.0 * delta))

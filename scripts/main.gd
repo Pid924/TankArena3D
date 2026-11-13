@@ -1,46 +1,69 @@
 extends Node3D
 ## Tank Arena 3D: game manager. Builds levels procedurally from text maps,
-## spawns enemies, handles items, HUD, camera and touch controls.
+## spawns enemies, handles items, menus, HUD, camera and local 2-player input.
 
 const TankScript = preload("res://scripts/tank.gd")
 const BulletScript = preload("res://scripts/bullet.gd")
 const ShellScript = preload("res://scripts/shell.gd")
 const OverlayScript = preload("res://scripts/overlay.gd")
 const Icons = preload("res://scripts/icons.gd")
+const I18n = preload("res://scripts/i18n.gd")
+const THAI_FONT = preload("res://fonts/NotoSansThai.ttf")
 
 # Map legend:
 #  .  floor        B  brick (breakable)     S  steel (needs max weapon)
 #  W  water        G  bush (hides player)   I  ice (slippery)
 #  H  high ground  > < ^ v  ramp rising toward that direction (^ = up/north)
-#  P  player start E  enemy spawn
-# Enemy list: b basic, f fast, h heavy, a artillery, s stealth
+#  P  player start (player 2 starts on the nearest free cell)   E  enemy spawn
+# Enemy list (20 letters): b scout, f racer, h bulwark, a mortar, s ghost,
+#  o hovercraft, m mine layer, t thief
 const LEVELS := [
 	{
-		"name": "Brick Yard",
-		"enemies": "bbbfbbfbhbbfbbsbhbfb",
+		"enemies": "bbfbtbbfbbtbfbbbtbfb",
 		"map": [
 			"E.........E.........E",
 			"..BB..BB.....BB..BB..",
 			"..BB..BB..S..BB..BB..",
-			"..........S..........",
-			"GG..BBBB.....BBBB..GG",
-			"GG..B...........B..GG",
-			"....B..SS...SS..B....",
-			"..........G..........",
-			"BB..WWW..GGG..WWW..BB",
-			"..........G..........",
-			"....B..SS...SS..B....",
-			"GG..B...........B..GG",
-			"GG..BBBB.....BBBB..GG",
-			"..........B..........",
-			"..BB..BB.BBB.BB..BB..",
-			"..BB.........BB..BB..",
-			"..........P..........",
+			".....................",
+			"WWWWWW..WWWWW..WWWWWW",
+			"WWWWWW..WWWWW..WWWWWW",
+			"....B...........B....",
+			"GG..B..SS...SS..B..GG",
+			"GG.......WWW.......GG",
+			"....BB..WWGWW..BB....",
+			".........WWW.........",
+			"..B...............B..",
+			"..B..BBB.....BBB..B..",
+			"WWW...............WWW",
+			"WGW..BB..BBB..BB..WGW",
+			"WWW.......P.......WWW",
+			".....................",
 		],
 	},
 	{
-		"name": "Frozen River",
-		"enemies": "bfbahbfsbbafhbsbfahb",
+		"enemies": "bfhobtbfohbtbfhobtfb",
+		"map": [
+			"E.........E.........E",
+			"....BB.........BB....",
+			"..S....WWWWWWW....S..",
+			"..S..WWW.....WWW..S..",
+			"....WW..BB.BB..WW....",
+			"GG.WW...B...B...WW.GG",
+			"GG.W.....GGG.....W.GG",
+			"...W..SS.GGG.SS..W...",
+			"...W.....GGG.....W...",
+			"...WW...........WW...",
+			"....WWW..B.B..WWW....",
+			"..B...WWW...WWW...B..",
+			"..B......B.B......B..",
+			".....BB.......BB.....",
+			"IIIII...........IIIII",
+			"IIIII.B..BPB..B.IIIII",
+			".....................",
+		],
+	},
+	{
+		"enemies": "bfambhotbfmabhoftmab",
 		"map": [
 			"E.........E.........E",
 			"..BBB...........BBB..",
@@ -49,57 +72,83 @@ const LEVELS := [
 			"IIIIIIIIIIIIIIIIIIIII",
 			"IIWWWWIIIIBIIIIWWWWII",
 			"IIWWWWIIIBBBIIIWWWWII",
-			"IIIIIIIIIIBIIIIIIIIII",
+			"IIWWWWIIIIBIIIIWWWWII",
 			"..BB....HHHHH....BB..",
 			"..BB...>HHHHH<...BB..",
-			"........HHHHH........",
-			"GGG.....^...^.....GGG",
-			"GGG..BB.......BB..GGG",
+			"WWW.....HHHHH.....WWW",
+			"WGW.....^...^.....WGW",
+			"WWW..BB.......BB..WWW",
 			".....B..BBBBB..B.....",
 			"..SS.....B.B.....SS..",
+			"WWWW......P......WWWW",
+			"WWWW.............WWWW",
+		],
+	},
+	{
+		"enemies": "bsfmsohtbsamfsohtsmb",
+		"map": [
+			"E.........E.........E",
+			"...GG...........GG...",
+			".WWWWW..BB.BB..WWWWW.",
+			".WGGGW.........WGGGW.",
+			".WGGGW..S...S..WGGGW.",
+			".WW.WW.........WW.WW.",
+			".......WW...WW.......",
+			"..BB...WG...GW...BB..",
+			"..BB...WW...WW...BB..",
+			".........SSS.........",
+			"GG..WWW.......WWW..GG",
+			"GG..WGW..B.B..WGW..GG",
+			"....WWW..B.B..WWW....",
+			"..S.......G.......S..",
+			"..S..BB..BBB..BB..S..",
 			"..........P..........",
 			"GGG...............GGG",
 		],
 	},
 	{
-		"name": "Highland Ring",
-		"enemies": "fhsabfhsabfhsabfhsab",
+		"enemies": "fhsamotbfhsamotfhsam",
 		"map": [
 			"E.........E.........E",
 			"...S.....BBB.....S...",
 			".GGS..HHHHHHHHH..SGG.",
 			".GG...H.......H...GG.",
-			"......H.BB.BB.H......",
-			"WW...>H.B...B.H<...WW",
-			"WW....H...v...H....WW",
+			"WWW...H.BB.BB.H...WWW",
+			"WWW..>H.B...B.H<..WWW",
+			"......H...v...H......",
 			"......HHHHHHHHH......",
-			"..BB......^......BB..",
+			"WWWWW.....^.....WWWWW",
 			"..BBSS..IIIII..SSBB..",
-			"........IIIII........",
-			"GG..BB..IIIII..BB..GG",
-			"GG..B...........B..GG",
-			"....B..BB...BB..B....",
-			"..SS...B.....B...SS..",
-			".........BPB.........",
+			"WW......IIIII......WW",
+			"GW..BB..IIIII..BB..WG",
+			"WW..B...........B..WW",
+			"....B..BB.WWW.BB.B...",
+			"..SS...B..WGW..B.SS..",
+			"..........P..........",
 			"GGG...............GGG",
 		],
 	},
 ]
 
-const ITEM_TYPES := ["star", "shield", "heart", "freeze", "bomb", "amphibious", "radar"]
-const ITEM_INFO := {
-	"star": ["PWR", Color(1.0, 0.85, 0.2), "WEAPON UPGRADE"],
-	"shield": ["SHD", Color(0.3, 0.8, 1.0), "SHIELD 10s"],
-	"heart": ["+HP", Color(1.0, 0.3, 0.4), "+1 HP"],
-	"freeze": ["FRZ", Color(0.7, 0.95, 1.0), "ENEMIES FROZEN"],
-	"bomb": ["BOM", Color(1.0, 0.45, 0.1), "BOMB!"],
-	"amphibious": ["AMP", Color(0.3, 0.7, 1.0), "AMPHIBIOUS: DRIVE ON WATER"],
-	"radar": ["RAD", Color(0.4, 1.0, 0.5), "RADAR ONLINE"],
+const ITEM_TYPES := ["star", "shield", "heart", "freeze", "bomb", "amphibious", "radar", "speed", "slow"]
+const ITEM_WEIGHTS := {"star": 3, "shield": 2, "heart": 2, "freeze": 2, "bomb": 1, "amphibious": 3, "radar": 1, "speed": 2, "slow": 2}
+const ITEM_COLORS := {
+	"star": Color(1.0, 0.85, 0.2),
+	"shield": Color(0.3, 0.8, 1.0),
+	"heart": Color(1.0, 0.3, 0.4),
+	"freeze": Color(0.7, 0.95, 1.0),
+	"bomb": Color(1.0, 0.45, 0.1),
+	"amphibious": Color(0.3, 0.7, 1.0),
+	"radar": Color(0.4, 1.0, 0.5),
+	"speed": Color(1.0, 0.6, 0.1),
+	"slow": Color(0.75, 0.55, 1.0),
 }
-const ENEMY_KINDS := {"b": "basic", "f": "fast", "h": "heavy", "a": "artillery", "s": "stealth"}
-const CARRIER_SLOTS := [3, 10, 17]
+const ENEMY_KINDS := {"b": "basic", "f": "fast", "h": "heavy", "a": "artillery", "s": "stealth", "o": "hover", "m": "miner", "t": "thief"}
+const KIND_ORDER := ["basic", "fast", "heavy", "artillery", "stealth", "hover", "miner", "thief"]
+const CARRIER_SLOTS := [2, 6, 10, 14, 18]
 const MAX_ON_FIELD := 4
 const MAX_HP := 5
+const SETTINGS_PATH := "user://settings.cfg"
 
 var W := 0
 var H := 0
@@ -111,11 +160,10 @@ var level_root: Node3D
 var camera: Camera3D
 var cam_focus := Vector3.ZERO
 var shake := 0.0
-var player = null
+var players: Array = []
 var enemies: Array = []
 var items: Array = []
-var item_tex := {}
-var amphibious_t := 0.0
+var mines: Array = []
 var spawn_list := ""
 var spawn_index := 0
 var spawn_timer := 1.0
@@ -124,49 +172,84 @@ var kills := 0
 var total := 20
 var score := 0
 var level_idx := 0
-var carry_hp := 3
+var start_level := 0
+var num_players := 1
+var carry_hp := [3, 3]
 var carry_weapon := 0
 var state := "title"
 var state_t := 0.0
+var lang := "th"
+
+# timed effects (players' items)
 var freeze_t := 0.0
 var radar_t := 0.0
-var msg_t := 0.0
+var amphibious_t := 0.0
+var speed_t := 0.0
+var slow_t := 0.0
+# timed effects (items stolen by thieves)
+var enemy_shield_t := 0.0
+var enemy_fast_t := 0.0
+var enemy_amph_t := 0.0
+var player_slow_t := 0.0
+var player_freeze_t := 0.0
+var jam_t := 0.0
 
+var msg_t := 0.0
 var touch_vec := Vector2.ZERO
 var touch_fire := false
 var touch_id := -1
 var fire_id := -1
 var touch_origin := Vector2.ZERO
-var touch_confirm := false
-var pending_pick := -1
 
 var hud_label: Label
 var msg_label: Label
-var center_label: Label
 var overlay: Control
+var menu_root: CenterContainer
+var menu_box: VBoxContainer
+var ui_font: Font
 var mats := {}
 var mesh_cache := {}
+var item_tex := {}
 
 
 func _ready() -> void:
 	randomize()
+	load_settings()
 	setup_input()
+	setup_font()
 	make_materials()
 	setup_world()
 	setup_hud()
-	load_level(0, false)
+	load_level(0)
+	show_title()
+
+
+func tr_(key: String) -> String:
+	return I18n.t(key, lang)
+
+
+func load_settings() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(SETTINGS_PATH) == OK:
+		lang = cfg.get_value("game", "lang", "th")
+	if not I18n.LANGS.has(lang):
+		lang = "th"
+
+
+func save_settings() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("game", "lang", lang)
+	cfg.save(SETTINGS_PATH)
 
 
 # ---------------------------------------------------------------- setup
 
 func setup_input() -> void:
 	var keymap := {
-		"move_up": [KEY_W, KEY_UP],
-		"move_down": [KEY_S, KEY_DOWN],
-		"move_left": [KEY_A, KEY_LEFT],
-		"move_right": [KEY_D, KEY_RIGHT],
-		"fire": [KEY_SPACE, KEY_J, KEY_K],
-		"confirm": [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE],
+		"p1_up": [KEY_W], "p1_down": [KEY_S], "p1_left": [KEY_A], "p1_right": [KEY_D],
+		"p1_fire": [KEY_SPACE, KEY_J],
+		"p2_up": [KEY_UP], "p2_down": [KEY_DOWN], "p2_left": [KEY_LEFT], "p2_right": [KEY_RIGHT],
+		"p2_fire": [KEY_ENTER, KEY_KP_ENTER, KEY_CTRL, KEY_KP_0],
 	}
 	for a in keymap:
 		if not InputMap.has_action(a):
@@ -175,18 +258,31 @@ func setup_input() -> void:
 			var e := InputEventKey.new()
 			e.physical_keycode = k
 			InputMap.action_add_event(a, e)
-	var jb := InputEventJoypadButton.new()
-	jb.button_index = JOY_BUTTON_A
-	InputMap.action_add_event("fire", jb)
-	var jb2 := InputEventJoypadButton.new()
-	jb2.button_index = JOY_BUTTON_START
-	InputMap.action_add_event("confirm", jb2)
-	var axes := {"move_left": [JOY_AXIS_LEFT_X, -1.0], "move_right": [JOY_AXIS_LEFT_X, 1.0], "move_up": [JOY_AXIS_LEFT_Y, -1.0], "move_down": [JOY_AXIS_LEFT_Y, 1.0]}
-	for a in axes:
-		var ja := InputEventJoypadMotion.new()
-		ja.axis = axes[a][0]
-		ja.axis_value = axes[a][1]
-		InputMap.action_add_event(a, ja)
+	# gamepads: first pad drives player 1, second pad player 2
+	for pi in 2:
+		var pre := "p%d_" % (pi + 1)
+		var jb := InputEventJoypadButton.new()
+		jb.button_index = JOY_BUTTON_A
+		jb.device = pi
+		InputMap.action_add_event(pre + "fire", jb)
+		var axes := {"left": [JOY_AXIS_LEFT_X, -1.0], "right": [JOY_AXIS_LEFT_X, 1.0], "up": [JOY_AXIS_LEFT_Y, -1.0], "down": [JOY_AXIS_LEFT_Y, 1.0]}
+		for a in axes:
+			var ja := InputEventJoypadMotion.new()
+			ja.axis = axes[a][0]
+			ja.axis_value = axes[a][1]
+			ja.device = pi
+			InputMap.action_add_event(pre + a, ja)
+
+
+func setup_font() -> void:
+	# Default font for Latin text, Noto Sans Thai as fallback for Thai glyphs.
+	var fv: FontFile = THAI_FONT.duplicate()
+	fv.fallbacks = [ThemeDB.fallback_font]
+	ui_font = fv
+	var theme := Theme.new()
+	theme.default_font = fv
+	theme.default_font_size = 20
+	get_tree().root.theme = theme
 
 
 func make_tex(w: int, h: int, fn: Callable) -> ImageTexture:
@@ -245,7 +341,7 @@ func make_materials() -> void:
 	mats.steel.metallic = 0.4
 	mats.steel.roughness = 0.35
 	for t in ITEM_TYPES:
-		item_tex[t] = Icons.make(t, ITEM_INFO[t][1])
+		item_tex[t] = Icons.make(t, ITEM_COLORS[t])
 	mats.water = std_mat(Color.WHITE, water_tex, true)
 	mats.water.roughness = 0.1
 	mats.ice = std_mat(Color(0.82, 0.9, 1.0), ice_tex, true)
@@ -269,6 +365,10 @@ func make_materials() -> void:
 	mats.marker.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mats.marker.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mats.debris = std_mat(Color(0.75, 0.35, 0.22))
+	mats.mine = std_mat(Color(0.25, 0.25, 0.25))
+	mats.mine_light = std_mat(Color(1.0, 0.15, 0.1))
+	mats.mine_light.emission_enabled = true
+	mats.mine_light.emission = Color(1.0, 0.1, 0.05)
 
 
 func setup_world() -> void:
@@ -312,18 +412,179 @@ func setup_hud() -> void:
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(overlay)
-	hud_label = make_label(18, HORIZONTAL_ALIGNMENT_LEFT)
+	hud_label = make_label(17, HORIZONTAL_ALIGNMENT_LEFT)
 	hud_label.position = Vector2(16, 40)
 	layer.add_child(hud_label)
-	msg_label = make_label(34, HORIZONTAL_ALIGNMENT_CENTER)
+	msg_label = make_label(32, HORIZONTAL_ALIGNMENT_CENTER)
 	msg_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	msg_label.position = Vector2(-400, 110)
-	msg_label.size = Vector2(800, 120)
+	msg_label.position = Vector2(-450, 110)
+	msg_label.size = Vector2(900, 120)
+	msg_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	layer.add_child(msg_label)
-	center_label = make_label(26, HORIZONTAL_ALIGNMENT_CENTER)
-	center_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	layer.add_child(center_label)
+	menu_root = CenterContainer.new()
+	menu_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(menu_root)
+	var panel := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.06, 0.08, 0.1, 0.88)
+	sb.set_corner_radius_all(14)
+	sb.set_content_margin_all(24)
+	sb.border_color = Color(0.3, 0.8, 0.6, 0.8)
+	sb.set_border_width_all(2)
+	panel.add_theme_stylebox_override("panel", sb)
+	menu_root.add_child(panel)
+	menu_box = VBoxContainer.new()
+	menu_box.add_theme_constant_override("separation", 10)
+	panel.add_child(menu_box)
+
+
+# ---------------------------------------------------------------- menus
+
+func clear_menu() -> void:
+	for c in menu_box.get_children():
+		menu_box.remove_child(c)
+		c.queue_free()
+
+
+func hide_menu() -> void:
+	clear_menu()
+	menu_root.visible = false
+
+
+func menu_text(text: String, size: int, col := Color.WHITE) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", col)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = 640
+	menu_box.add_child(l)
+	return l
+
+
+func menu_button(text: String, cb: Callable) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.add_theme_font_size_override("font_size", 24)
+	b.custom_minimum_size = Vector2(380, 50)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	b.pressed.connect(cb)
+	menu_box.add_child(b)
+	return b
+
+
+func focus_first_button() -> void:
+	for c in menu_box.get_children():
+		if c is Button:
+			c.grab_focus()
+			return
+
+
+func show_title() -> void:
+	state = "title"
+	clear_menu()
+	menu_root.visible = true
+	menu_text("TANK ARENA 3D", 44, Color(0.5, 1.0, 0.75))
+	menu_text(tr_("title_tag"), 20)
+	menu_button(tr_("btn_1p"), func(): start_game(1))
+	menu_button(tr_("btn_2p"), func(): start_game(2))
+	menu_button(tr_("btn_level") % (start_level + 1), func():
+		start_level = (start_level + 1) % LEVELS.size()
+		show_title())
+	menu_button(tr_("btn_lang") % I18n.LANG_NAMES[lang], func():
+		lang = I18n.LANGS[(I18n.LANGS.find(lang) + 1) % I18n.LANGS.size()]
+		save_settings()
+		show_title())
+	menu_text(tr_("controls_1p") + "\n" + tr_("controls_2p"), 15, Color(0.8, 0.85, 0.9))
+	focus_first_button.call_deferred()
+
+
+func start_game(n: int) -> void:
+	num_players = n
+	score = 0
+	carry_hp = [3, 3]
+	carry_weapon = 0
+	show_briefing(start_level)
+
+
+func show_briefing(idx: int) -> void:
+	load_level(idx)
+	state = "brief"
+	clear_menu()
+	menu_root.visible = true
+	menu_text(tr_("brief_title") % [idx + 1, tr_("lv_%d" % idx)], 34, Color(0.5, 1.0, 0.75))
+	menu_text(tr_("brief_enemies"), 20, Color(1.0, 0.85, 0.4))
+	var counts := {}
+	var max_hp := {}
+	for i in spawn_list.length():
+		var k: String = ENEMY_KINDS.get(spawn_list[i], "basic")
+		counts[k] = counts.get(k, 0) + 1
+		max_hp[k] = maxi(max_hp.get(k, 0), TankScript.KIND_HP[k] + hp_bonus(i))
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 6)
+	for k in KIND_ORDER:
+		if not counts.has(k):
+			continue
+		var sw := ColorRect.new()
+		sw.color = TankScript.KIND_COLORS[k]
+		sw.custom_minimum_size = Vector2(30, 30)
+		sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		grid.add_child(sw)
+		var base_hp: int = TankScript.KIND_HP[k]
+		var hp_txt := str(base_hp) if base_hp == max_hp[k] else "%d-%d" % [base_hp, max_hp[k]]
+		var l := Label.new()
+		l.text = "%s  %s  %s\n%s" % [tr_("name_" + k), tr_("brief_count") % counts[k], tr_("brief_hp") % hp_txt, tr_("desc_" + k)]
+		l.add_theme_font_size_override("font_size", 16)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = 600
+		grid.add_child(l)
+	var gc := CenterContainer.new()
+	gc.add_child(grid)
+	menu_box.add_child(gc)
+	var notes := tr_("brief_carrier") + "\n" + tr_("brief_tough")
+	if num_players == 2:
+		notes += "\n" + tr_("brief_shared")
+	menu_text(notes, 15, Color(1.0, 0.75, 0.75))
+	menu_button(tr_("btn_start"), func(): begin_level())
+	focus_first_button.call_deferred()
+
+
+func begin_level() -> void:
+	hide_menu()
+	spawn_players()
+	state = "playing"
+	show_msg(tr_("brief_title") % [level_idx + 1, tr_("lv_%d" % level_idx)], 2.0)
+
+
+func show_game_over() -> void:
+	state = "gameover"
+	clear_menu()
+	menu_root.visible = true
+	menu_text(tr_("gameover"), 44, Color(1.0, 0.4, 0.4))
+	menu_text(tr_("score") % score, 22)
+	menu_button(tr_("btn_retry"), func():
+		carry_hp = [3, 3]
+		carry_weapon = 0
+		show_briefing(level_idx))
+	menu_button(tr_("btn_menu"), func():
+		load_level(0)
+		show_title())
+	focus_first_button.call_deferred()
+
+
+func show_victory() -> void:
+	state = "victory"
+	clear_menu()
+	menu_root.visible = true
+	menu_text(tr_("victory"), 44, Color(1.0, 0.85, 0.3))
+	menu_text(tr_("victory_body") % score, 22)
+	menu_button(tr_("btn_menu"), func():
+		load_level(0)
+		show_title())
+	focus_first_button.call_deferred()
 
 
 # ---------------------------------------------------------------- helpers
@@ -348,10 +609,72 @@ func ground_height(x: float, z: float) -> float:
 	return 0.0
 
 
-func player_hidden() -> bool:
-	if player == null or not is_instance_valid(player):
-		return true
-	return cells.get(cell_of(player.global_position), ".") == "G"
+func alive_players() -> Array:
+	return players.filter(func(p): return p != null and is_instance_valid(p) and not p.dead)
+
+
+func is_hidden(p) -> bool:
+	return cells.get(cell_of(p.global_position), ".") == "G"
+
+
+func nearest_visible_player(pos: Vector3):
+	var best = null
+	var bd := INF
+	for p in alive_players():
+		if is_hidden(p):
+			continue
+		var d: float = p.global_position.distance_to(pos)
+		if d < bd:
+			bd = d
+			best = p
+	return best
+
+
+func nearest_player_dist(pos: Vector3) -> float:
+	var bd := INF
+	for p in alive_players():
+		bd = minf(bd, p.global_position.distance_to(pos))
+	return bd
+
+
+func nearest_item(pos: Vector3):
+	var best = null
+	var bd := INF
+	for it in items:
+		var d: float = it.node.global_position.distance_to(pos)
+		if d < bd:
+			bd = d
+			best = it.node
+	return best
+
+
+func can_pass_water(t) -> bool:
+	if t.is_player:
+		return amphibious_t > 0.0
+	return t.kind == "hover" or enemy_amph_t > 0.0
+
+
+func enemy_speed_mult() -> float:
+	var m := 1.0
+	if slow_t > 0.0:
+		m *= 0.45
+	if enemy_fast_t > 0.0:
+		m *= 1.5
+	return m
+
+
+func player_speed_mult() -> float:
+	var m := 1.0
+	if speed_t > 0.0:
+		m *= 1.6
+	if player_slow_t > 0.0:
+		m *= 0.6
+	return m
+
+
+func hp_bonus(spawn_i: int) -> int:
+	# later tanks in a wave are tougher; the last levels add a bit more
+	return int(spawn_i / 7) + (1 if level_idx >= 3 else 0)
 
 
 func box_mesh(size: Vector3) -> BoxMesh:
@@ -393,7 +716,7 @@ func show_msg(text: String, dur := 1.6) -> void:
 
 # ---------------------------------------------------------------- level building
 
-func load_level(idx: int, start_play: bool) -> void:
+func load_level(idx: int) -> void:
 	if level_root:
 		level_root.free()
 	level_root = Node3D.new()
@@ -402,9 +725,9 @@ func load_level(idx: int, start_play: bool) -> void:
 	blocks.clear()
 	enemies.clear()
 	items.clear()
-	amphibious_t = 0.0
+	mines.clear()
 	enemy_spawns.clear()
-	player = null
+	players.clear()
 	level_idx = idx
 	var L: Dictionary = LEVELS[idx]
 	var rows: Array = L["map"]
@@ -426,11 +749,16 @@ func load_level(idx: int, start_play: bool) -> void:
 	spawn_timer = 1.5
 	freeze_t = 0.0
 	radar_t = 0.0
+	amphibious_t = 0.0
+	speed_t = 0.0
+	slow_t = 0.0
+	enemy_shield_t = 0.0
+	enemy_fast_t = 0.0
+	enemy_amph_t = 0.0
+	player_slow_t = 0.0
+	player_freeze_t = 0.0
+	jam_t = 0.0
 	cam_focus = cell_center(player_spawn)
-	if start_play:
-		spawn_player()
-		state = "playing"
-		show_msg("LEVEL %d\n%s" % [idx + 1, L["name"]], 2.5)
 
 
 func build_floor() -> void:
@@ -465,7 +793,7 @@ func build_cell(c: Vector2i, ch: String) -> void:
 			make_block(c, ch)
 		"W":
 			add_mesh(box_mesh(Vector3(1, 0.06, 1)), mats.water, p + Vector3(0, 0.0, 0))
-			add_static(Vector3(1, 1.2, 1), p + Vector3(0, 0.6, 0), 8)
+			add_static(Vector3(1, 1.2, 1), p + Vector3(0, 0.6, 0), TankScript.WATER_LAYER)
 		"G":
 			for i in 3:
 				var sm := SphereMesh.new()
@@ -530,9 +858,7 @@ func make_block(c: Vector2i, type: String) -> void:
 	var mi := MeshInstance3D.new()
 	mi.mesh = box_mesh(Vector3(0.98, h, 0.98))
 	mi.position.y = h / 2.0
-	match type:
-		"B": mi.material_override = mats.brick
-		_: mi.material_override = mats.steel
+	mi.material_override = mats.brick if type == "B" else mats.steel
 	body.add_child(mi)
 	body.set_meta("block", true)
 	body.set_meta("cell", c)
@@ -555,14 +881,32 @@ func remove_block(c: Vector2i) -> void:
 
 # ---------------------------------------------------------------- spawning
 
-func spawn_player() -> void:
-	player = TankScript.new()
-	level_root.add_child(player)
-	player.setup(self, true, "player")
-	player.global_position = cell_center(player_spawn) + Vector3(0, 0.05, 0)
-	player.hp = carry_hp
-	player.weapon = carry_weapon
-	player.shield = 3.0
+func free_cell_near(c: Vector2i) -> Vector2i:
+	for r in range(1, 4):
+		for d in [Vector2i(r, 0), Vector2i(-r, 0), Vector2i(0, -r), Vector2i(r, -1), Vector2i(-r, -1)]:
+			var n: Vector2i = c + d
+			if cells.get(n, "#") == "." and not enemy_spawns.has(n):
+				return n
+	return c
+
+
+func spawn_players() -> void:
+	players.clear()
+	var spots := [player_spawn]
+	if num_players == 2:
+		var left := player_spawn + Vector2i(-2, 0)
+		var right := player_spawn + Vector2i(2, 0)
+		spots = [left if cells.get(left, "#") == "." else player_spawn, right if cells.get(right, "#") == "." else free_cell_near(player_spawn)]
+	for i in num_players:
+		var p = TankScript.new()
+		level_root.add_child(p)
+		p.setup(self, true, "player", i)
+		p.global_position = cell_center(spots[i]) + Vector3(0, 0.05, 0)
+		p.hp = carry_hp[i]
+		p.max_hp = MAX_HP
+		p.weapon = carry_weapon
+		p.shield = 3.0
+		players.append(p)
 
 
 func update_spawning(delta: float) -> void:
@@ -574,13 +918,14 @@ func update_spawning(delta: float) -> void:
 	var sp: Vector2i = enemy_spawns[spawn_rr % enemy_spawns.size()]
 	spawn_rr += 1
 	var pos := cell_center(sp)
-	for t in enemies + [player]:
-		if t != null and is_instance_valid(t) and t.global_position.distance_to(pos) < 1.1:
+	for t in enemies + alive_players():
+		if is_instance_valid(t) and t.global_position.distance_to(pos) < 1.1:
 			spawn_timer = 0.3
 			return
 	var e = TankScript.new()
 	level_root.add_child(e)
 	e.setup(self, false, ENEMY_KINDS.get(spawn_list[spawn_index], "basic"))
+	e.set_bonus_hp(hp_bonus(spawn_index))
 	e.carrier = spawn_index in CARRIER_SLOTS
 	e.global_position = pos + Vector3(0, 0.05, 0)
 	e.ai_dir = Vector3(0, 0, 1)
@@ -635,6 +980,49 @@ func spawn_shell(shooter, target: Vector3) -> void:
 	s.global_position = s.start
 
 
+func spawn_mine(pos: Vector3) -> void:
+	var c := cell_of(pos)
+	var t: String = cells.get(c, "#")
+	if t != "." and t != "I":
+		return
+	for m in mines:
+		if m.cell == c:
+			return
+	var node := Node3D.new()
+	level_root.add_child(node)
+	node.position = Vector3(pos.x, 0.0, pos.z)
+	var body := CylinderMesh.new()
+	body.top_radius = 0.2
+	body.bottom_radius = 0.26
+	body.height = 0.08
+	add_mesh(body, mats.mine, Vector3(0, 0.04, 0), node)
+	var light := SphereMesh.new()
+	light.radius = 0.07
+	light.height = 0.1
+	var lm := add_mesh(light, mats.mine_light, Vector3(0, 0.1, 0), node)
+	mines.append({"node": node, "light": lm, "cell": c, "t": 8.0})
+
+
+func update_mines(delta: float) -> void:
+	for m in mines.duplicate():
+		m.t -= delta
+		var node: Node3D = m.node
+		m.light.visible = fmod(m.t, 0.5) < 0.3 if m.t > 2.0 else fmod(m.t, 0.2) < 0.1
+		var hit = null
+		for p in alive_players():
+			var d := Vector2(p.global_position.x - node.position.x, p.global_position.z - node.position.z).length()
+			if d < 0.5 and absf(p.global_position.y - node.position.y) < 0.4:
+				hit = p
+		if hit != null:
+			explode_fx(node.position + Vector3(0, 0.2, 0), 1.4, Color(1, 0.5, 0.15))
+			shake = 0.3
+			show_msg(tr_("msg_mine"), 1.0)
+			hit.take_hit(1)
+		if hit != null or m.t <= 0.0:
+			node.queue_free()
+			mines.erase(m)
+
+
 # ---------------------------------------------------------------- combat
 
 func bullet_hit(b, collider, pos: Vector3) -> void:
@@ -668,10 +1056,10 @@ func damage_block(body, power: int) -> void:
 func artillery_impact(pos: Vector3) -> void:
 	explode_fx(pos + Vector3(0, 0.3, 0), 2.2, Color(1, 0.5, 0.15))
 	shake = 0.25
-	if player != null and is_instance_valid(player):
-		var d := Vector2(player.global_position.x - pos.x, player.global_position.z - pos.z).length()
-		if d < 1.1 and absf(player.global_position.y - pos.y) < 1.0:
-			player.take_hit(1)
+	for p in alive_players():
+		var d := Vector2(p.global_position.x - pos.x, p.global_position.z - pos.z).length()
+		if d < 1.1 and absf(p.global_position.y - pos.y) < 1.0:
+			p.take_hit(1)
 	var pc := cell_of(pos)
 	for dx in range(-1, 2):
 		for dz in range(-1, 2):
@@ -680,17 +1068,20 @@ func artillery_impact(pos: Vector3) -> void:
 				remove_block(c)
 
 
-func on_player_hit() -> void:
+func on_player_hit(p) -> void:
 	shake = 0.35
-	show_msg("HIT!  HP %d" % player.hp, 1.0)
+	show_msg(tr_("msg_hit") % [p.player_idx + 1, p.hp], 1.0)
 
 
 func on_tank_destroyed(t) -> void:
 	explode_fx(t.global_position + Vector3(0, 0.4, 0), 1.8, Color(1, 0.6, 0.2))
-	if t == player:
+	if t.is_player:
 		shake = 0.6
-		state = "dying"
-		state_t = 1.5
+		if num_players == 2:
+			show_msg(tr_("msg_dead") % (t.player_idx + 1), 2.0)
+		if alive_players().is_empty():
+			state = "dying"
+			state_t = 1.5
 		return
 	enemies.erase(t)
 	kills += 1
@@ -698,15 +1089,28 @@ func on_tank_destroyed(t) -> void:
 	if kills >= total and state == "playing":
 		state = "clear"
 		state_t = 3.5
-		if player != null and is_instance_valid(player):
-			carry_hp = player.hp
-			carry_weapon = player.weapon
-		show_msg("LEVEL CLEAR!", 3.5)
+		carry_hp = [3, 3]
+		for p in alive_players():
+			carry_hp[p.player_idx] = p.hp
+			carry_weapon = p.weapon
+		show_msg(tr_("msg_clear"), 3.5)
 
 
 # ---------------------------------------------------------------- items
 
-func spawn_item_random() -> void:
+func pick_item_type() -> String:
+	var total_w := 0
+	for t in ITEM_TYPES:
+		total_w += ITEM_WEIGHTS[t]
+	var r := randi() % total_w
+	for t in ITEM_TYPES:
+		r -= ITEM_WEIGHTS[t]
+		if r < 0:
+			return t
+	return "star"
+
+
+func spawn_item_random(force_type := "") -> void:
 	var free_cells: Array = []
 	for c in cells:
 		var t: String = cells[c]
@@ -715,8 +1119,8 @@ func spawn_item_random() -> void:
 	if free_cells.is_empty():
 		return
 	var c: Vector2i = free_cells[randi() % free_cells.size()]
-	var type: String = ITEM_TYPES[randi() % ITEM_TYPES.size()]
-	var info: Array = ITEM_INFO[type]
+	var type: String = force_type if force_type != "" else pick_item_type()
+	var col: Color = ITEM_COLORS[type]
 	var node := Node3D.new()
 	level_root.add_child(node)
 	node.position = cell_center(c) + Vector3(0, 0.45, 0)
@@ -733,12 +1137,18 @@ func spawn_item_random() -> void:
 	glow.top_radius = 0.42
 	glow.bottom_radius = 0.42
 	glow.height = 0.02
-	var gm := std_mat(Color(info[1].r, info[1].g, info[1].b, 0.45))
+	var gm := std_mat(Color(col.r, col.g, col.b, 0.45))
 	gm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	gm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var ring := add_mesh(glow, gm, cell_center(c) + Vector3(0, 0.02, 0))
-	items.append({"node": node, "ring": ring, "type": type, "t": 0.0, "color": info[1]})
-	show_msg("ITEM DROPPED!", 1.2)
+	items.append({"node": node, "ring": ring, "type": type, "t": 0.0, "color": col})
+	show_msg(tr_("msg_drop"), 1.2)
+
+
+func remove_item(it: Dictionary) -> void:
+	it.ring.queue_free()
+	it.node.queue_free()
+	items.erase(it)
 
 
 func update_items(delta: float) -> void:
@@ -749,31 +1159,45 @@ func update_items(delta: float) -> void:
 		node.visible = it.t < 11.0 or fmod(it.t, 0.3) < 0.18
 		it.ring.visible = node.visible
 		if it.t > 15.0:
-			it.ring.queue_free()
-			node.queue_free()
-			items.erase(it)
+			remove_item(it)
 			continue
-		if player != null and is_instance_valid(player):
-			var d := Vector2(player.global_position.x - node.position.x, player.global_position.z - node.position.z).length()
+		var taken := false
+		for p in alive_players():
+			var d := Vector2(p.global_position.x - node.position.x, p.global_position.z - node.position.z).length()
 			if d < 0.75:
 				apply_item(it.type)
 				explode_fx(node.global_position, 1.0, it.color)
-				it.ring.queue_free()
-				node.queue_free()
-				items.erase(it)
+				remove_item(it)
+				taken = true
+				break
+		if taken:
+			continue
+		for e in enemies:
+			if is_instance_valid(e) and e.kind == "thief":
+				var d2 := Vector2(e.global_position.x - node.position.x, e.global_position.z - node.position.z).length()
+				if d2 < 0.75:
+					steal_item(it.type)
+					explode_fx(node.global_position, 1.0, Color(0.9, 0.2, 0.6))
+					remove_item(it)
+					break
 
 
 func apply_item(type: String) -> void:
-	show_msg(ITEM_INFO[type][2], 1.8)
+	show_msg(tr_("item_" + type) if type != "star" else "", 1.8)
 	score += 50
 	match type:
 		"star":
-			player.weapon = mini(3, player.weapon + 1)
-			show_msg("WEAPON LEVEL %d" % player.weapon + (" - BREAKS STEEL!" if player.weapon >= 3 else ""), 1.8)
+			var lv := 0
+			for p in alive_players():
+				p.weapon = mini(3, p.weapon + 1)
+				lv = p.weapon
+			show_msg(tr_("item_star_max") if lv >= 3 else tr_("item_star") % lv, 1.8)
 		"shield":
-			player.shield = 10.0
+			for p in alive_players():
+				p.shield = 10.0
 		"heart":
-			player.hp = mini(MAX_HP, player.hp + 1)
+			for p in alive_players():
+				p.hp = mini(MAX_HP, p.hp + 1)
 		"freeze":
 			freeze_t = 8.0
 		"bomb":
@@ -785,18 +1209,61 @@ func apply_item(type: String) -> void:
 			amphibious_t = 15.0
 		"radar":
 			radar_t = 15.0
+			jam_t = 0.0
+		"speed":
+			speed_t = 10.0
+			player_slow_t = 0.0
+		"slow":
+			slow_t = 10.0
+			enemy_fast_t = 0.0
 
 
-func update_amphibious(delta: float) -> void:
-	if player == null or not is_instance_valid(player):
-		return
+func steal_item(type: String) -> void:
+	# A thief picked up the item: the effect turns against the players.
+	show_msg(tr_("steal_" + type), 2.2)
+	shake = 0.2
+	match type:
+		"star":
+			for p in alive_players():
+				p.weapon = maxi(0, p.weapon - 1)
+		"shield":
+			enemy_shield_t = 8.0
+		"heart":
+			for e in enemies:
+				if is_instance_valid(e):
+					e.hp += 1
+					e.max_hp = maxi(e.max_hp, e.hp)
+		"freeze":
+			player_freeze_t = 3.0
+		"bomb":
+			for p in alive_players():
+				explode_fx(p.global_position + Vector3(0, 0.4, 0), 1.6, Color(1, 0.45, 0.1))
+				p.take_hit(1)
+		"amphibious":
+			enemy_amph_t = 12.0
+		"radar":
+			jam_t = 12.0
+			radar_t = 0.0
+		"speed":
+			enemy_fast_t = 10.0
+			slow_t = 0.0
+		"slow":
+			player_slow_t = 6.0
+			speed_t = 0.0
+
+
+func update_timers(delta: float) -> void:
+	freeze_t = maxf(0.0, freeze_t - delta)
+	radar_t = maxf(0.0, radar_t - delta)
 	amphibious_t = maxf(0.0, amphibious_t - delta)
-	# never switch it off while the tank is still on water: wait until it reaches land
-	var was_on: bool = (player.collision_mask & 8) == 0
-	if was_on and amphibious_t <= 0.0 and cells.get(cell_of(player.global_position), ".") == "W":
-		amphibious_t = 0.01
-	player.collision_mask = (1 | 2 | 4) if amphibious_t > 0.0 else (1 | 2 | 4 | 8)
-	player.floater.visible = amphibious_t > 0.0 and (amphibious_t > 3.0 or fmod(amphibious_t, 0.3) < 0.18)
+	speed_t = maxf(0.0, speed_t - delta)
+	slow_t = maxf(0.0, slow_t - delta)
+	enemy_shield_t = maxf(0.0, enemy_shield_t - delta)
+	enemy_fast_t = maxf(0.0, enemy_fast_t - delta)
+	enemy_amph_t = maxf(0.0, enemy_amph_t - delta)
+	player_slow_t = maxf(0.0, player_slow_t - delta)
+	player_freeze_t = maxf(0.0, player_freeze_t - delta)
+	jam_t = maxf(0.0, jam_t - delta)
 
 
 # ---------------------------------------------------------------- effects
@@ -838,61 +1305,46 @@ func debris_fx(pos: Vector3, m: Material) -> void:
 # ---------------------------------------------------------------- main loop
 
 func _process(delta: float) -> void:
-	var confirm := Input.is_action_just_pressed("confirm") or touch_confirm
-	touch_confirm = false
 	match state:
-		"title":
-			var pick := -1
-			if confirm:
-				pick = 0
-			if pending_pick >= 0:
-				pick = pending_pick
-				pending_pick = -1
-			if pick >= 0:
-				score = 0
-				carry_hp = 3
-				carry_weapon = 0
-				load_level(pick, true)
 		"playing":
-			freeze_t = maxf(0.0, freeze_t - delta)
-			radar_t = maxf(0.0, radar_t - delta)
+			update_timers(delta)
 			update_spawning(delta)
 			update_items(delta)
-			update_amphibious(delta)
+			update_mines(delta)
 		"dying":
 			state_t -= delta
 			if state_t <= 0.0:
-				state = "gameover"
-		"gameover":
-			if confirm:
-				carry_hp = 3
-				carry_weapon = 0
-				load_level(level_idx, true)
+				show_game_over()
 		"clear":
 			state_t -= delta
 			if state_t <= 0.0:
 				if level_idx + 1 < LEVELS.size():
-					load_level(level_idx + 1, true)
+					show_briefing(level_idx + 1)
 				else:
-					state = "victory"
-		"victory":
-			if confirm:
-				state = "title"
-				load_level(0, false)
+					show_victory()
 	update_camera(delta)
 	update_hud(delta)
 
 
 func update_camera(delta: float) -> void:
 	var target := Vector3(W / 2.0, 0, H / 2.0)
-	if state != "title" and player != null and is_instance_valid(player):
-		target = player.global_position
+	var spread := 0.0
+	var alive := alive_players()
+	if (state == "playing" or state == "clear" or state == "dying") and not alive.is_empty():
+		var sum := Vector3.ZERO
+		for p in alive:
+			sum += p.global_position
+		target = sum / alive.size()
+		if alive.size() == 2:
+			spread = alive[0].global_position.distance_to(alive[1].global_position)
 		target.x = clampf(target.x, 6.0, W - 6.0)
 		target.z = clampf(target.z, 3.0, H - 4.5)
 	target.y = 0.0
 	cam_focus = cam_focus.lerp(target, minf(1.0, 4.0 * delta))
-	var dist := 17.0 if state == "title" else 13.0
-	camera.position = cam_focus + Vector3(0, dist, dist * 0.62)
+	var dist := 17.0
+	if state != "title" and state != "brief":
+		dist = 13.0 + clampf((spread - 6.0) * 0.6, 0.0, 6.0)
+	camera.position = camera.position.lerp(cam_focus + Vector3(0, dist, dist * 0.62), minf(1.0, 6.0 * delta))
 	camera.look_at(cam_focus)
 	if shake > 0.0:
 		shake = maxf(0.0, shake - delta)
@@ -901,45 +1353,44 @@ func update_camera(delta: float) -> void:
 
 func update_hud(delta: float) -> void:
 	msg_t = maxf(0.0, msg_t - delta)
-	msg_label.visible = msg_t > 0.0 and state != "title"
-	center_label.text = ""
-	match state:
-		"title":
-			hud_label.text = ""
-			center_label.text = "TANK ARENA 3D\n\nDestroy every enemy tank. You can take 3 hits.\nShoot flashing tanks to make them drop items.\n\nMove: WASD / Arrows     Fire: Space / J\nTouch: drag left side to move, hold right side to fire\n\nPress ENTER or tap to start  (or 1-%d to pick a level)" % LEVELS.size()
-			return
-		"gameover":
-			center_label.text = "GAME OVER\n\nScore %d\n\nPress ENTER or tap to retry level %d" % [score, level_idx + 1]
-		"victory":
-			center_label.text = "VICTORY!\n\nAll arenas cleared\nFinal score %d\n\nPress ENTER or tap to play again" % score
+	msg_label.visible = msg_t > 0.0 and state != "title" and state != "brief"
+	if state == "title" or state == "brief":
+		hud_label.text = ""
+		return
 	var lines: Array = []
-	lines.append("LEVEL %d  %s" % [level_idx + 1, LEVELS[level_idx]["name"]])
-	lines.append("ENEMIES LEFT %d" % (total - kills))
-	lines.append("SCORE %d" % score)
-	if player != null and is_instance_valid(player):
-		lines.append("WEAPON Lv %d" % player.weapon)
-		if player.shield > 0.0:
-			lines.append("SHIELD %d" % ceili(player.shield))
-		if player_hidden():
-			lines.append("HIDDEN IN BUSH")
-	if freeze_t > 0.0:
-		lines.append("FREEZE %d" % ceili(freeze_t))
-	if amphibious_t > 0.0:
-		lines.append("AMPHIBIOUS %d" % ceili(amphibious_t))
+	lines.append(tr_("hud_level") % [level_idx + 1, tr_("lv_%d" % level_idx)])
+	lines.append(tr_("hud_left") % (total - kills))
+	lines.append(tr_("hud_score") % score)
+	var alive := alive_players()
+	if not alive.is_empty():
+		lines.append(tr_("hud_weapon") % alive[0].weapon)
+		if alive[0].shield > 0.0:
+			lines.append(tr_("hud_shield") % ceili(alive[0].shield))
+		for p in alive:
+			if is_hidden(p):
+				lines.append(("P%d " % (p.player_idx + 1) if num_players == 2 else "") + tr_("hud_hidden"))
+	var timers := [
+		[freeze_t, "hud_freeze"], [slow_t, "hud_slow"], [speed_t, "hud_speed"], [amphibious_t, "hud_amph"],
+		[radar_t, "hud_radar"], [jam_t, "hud_jam"], [enemy_shield_t, "hud_eshield"], [enemy_fast_t, "hud_efast"],
+		[enemy_amph_t, "hud_eamph"], [player_slow_t, "hud_pslow"], [player_freeze_t, "hud_pfrozen"],
+	]
+	for t in timers:
+		if t[0] > 0.0:
+			lines.append(tr_(t[1]) % ceili(t[0]))
+	hud_label.position.y = 40.0 if num_players == 1 else 66.0
 	hud_label.text = "\n".join(lines)
 
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and state == "title":
-		var n: int = event.physical_keycode - KEY_1
-		if n >= 0 and n < LEVELS.size():
-			pending_pick = n
+	if state != "playing":
+		touch_id = -1
+		fire_id = -1
+		touch_vec = Vector2.ZERO
+		touch_fire = false
+		return
 	if event is InputEventScreenTouch:
 		var vp := get_viewport().get_visible_rect().size
 		if event.pressed:
-			if state != "playing":
-				touch_confirm = true
-				return
 			if event.position.x < vp.x * 0.5:
 				touch_id = event.index
 				touch_origin = event.position
