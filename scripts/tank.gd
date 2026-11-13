@@ -37,6 +37,7 @@ var hull_mat: StandardMaterial3D
 var all_mats: Array = []
 var base_color := Color.WHITE
 var shield_mesh: MeshInstance3D
+var floater: MeshInstance3D
 
 
 func setup(m, player: bool, k: String) -> void:
@@ -44,7 +45,7 @@ func setup(m, player: bool, k: String) -> void:
 	is_player = player
 	kind = k
 	collision_layer = 4
-	collision_mask = 1 | 2 | 4
+	collision_mask = 1 | 2 | 4 | 8
 	floor_max_angle = deg_to_rad(50.0)
 	floor_snap_length = 0.3
 	var cs := CollisionShape3D.new()
@@ -169,6 +170,21 @@ func build_visual() -> void:
 	shield_mesh.visible = false
 	add_child(shield_mesh)
 	visual.rotation.y = atan2(-facing.x, -facing.z)
+	# float ring shown while the amphibious item is active
+	floater = MeshInstance3D.new()
+	var fm := CylinderMesh.new()
+	fm.top_radius = 0.62
+	fm.bottom_radius = 0.66
+	fm.height = 0.12
+	floater.mesh = fm
+	var flm := StandardMaterial3D.new()
+	flm.albedo_color = Color(1.0, 0.55, 0.15)
+	flm.emission_enabled = true
+	flm.emission = Color(0.35, 0.15, 0.0)
+	floater.material_override = flm
+	floater.position.y = 0.12
+	floater.visible = false
+	add_child(floater)
 
 
 func _physics_process(delta: float) -> void:

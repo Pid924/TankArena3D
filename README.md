@@ -27,15 +27,17 @@ Flashing red tanks drop an item when you hit them.
 Basic (grey), Fast (orange), Heavy (purple, 4 HP), Artillery (brown, lobs shells over walls at your position: watch for the red circle), Stealth (nearly invisible, hidden from the minimap without radar).
 
 ### Items
-| Label | Item |
+Items appear as round picture badges (drawn in code, also shown on the minimap).
+
+| Icon | Item |
 |---|---|
-| PWR | Weapon upgrade: Lv1 faster shots, Lv2 two shots at once, Lv3 breaks steel |
-| SHD | Shield for 10 s |
-| +HP | One extra HP (max 5) |
-| FRZ | Freezes all enemies for 8 s |
-| BOM | Destroys every enemy on the field |
-| WAL | Temporary steel walls around you for 12 s |
-| RAD | Radar for 15 s: reveals stealth tanks on screen and minimap |
+| Gold star | Weapon upgrade: Lv1 faster shots, Lv2 two shots at once, Lv3 breaks steel |
+| Blue shield | Shield for 10 s |
+| Red heart | One extra HP (max 5) |
+| Snowflake | Freezes all enemies for 8 s |
+| Bomb | Destroys every enemy on the field |
+| Tank on waves | Amphibious for 15 s: drive across water (a float ring appears; it never runs out while you are still on water) |
+| Radar | Radar for 15 s: reveals stealth tanks on screen and minimap |
 
 ## Development
 

@@ -6,6 +6,7 @@ const TankScript = preload("res://scripts/tank.gd")
 const BulletScript = preload("res://scripts/bullet.gd")
 const ShellScript = preload("res://scripts/shell.gd")
 const OverlayScript = preload("res://scripts/overlay.gd")
+const Icons = preload("res://scripts/icons.gd")
 
 # Map legend:
 #  .  floor        B  brick (breakable)     S  steel (needs max weapon)
@@ -85,14 +86,14 @@ const LEVELS := [
 	},
 ]
 
-const ITEM_TYPES := ["star", "shield", "heart", "freeze", "bomb", "walls", "radar"]
+const ITEM_TYPES := ["star", "shield", "heart", "freeze", "bomb", "amphibious", "radar"]
 const ITEM_INFO := {
 	"star": ["PWR", Color(1.0, 0.85, 0.2), "WEAPON UPGRADE"],
 	"shield": ["SHD", Color(0.3, 0.8, 1.0), "SHIELD 10s"],
 	"heart": ["+HP", Color(1.0, 0.3, 0.4), "+1 HP"],
 	"freeze": ["FRZ", Color(0.7, 0.95, 1.0), "ENEMIES FROZEN"],
 	"bomb": ["BOM", Color(1.0, 0.45, 0.1), "BOMB!"],
-	"walls": ["WAL", Color(0.8, 0.8, 0.88), "STEEL WALLS"],
+	"amphibious": ["AMP", Color(0.3, 0.7, 1.0), "AMPHIBIOUS: DRIVE ON WATER"],
 	"radar": ["RAD", Color(0.4, 1.0, 0.5), "RADAR ONLINE"],
 }
 const ENEMY_KINDS := {"b": "basic", "f": "fast", "h": "heavy", "a": "artillery", "s": "stealth"}
@@ -113,7 +114,8 @@ var shake := 0.0
 var player = null
 var enemies: Array = []
 var items: Array = []
-var temp_walls: Array = []
+var item_tex := {}
+var amphibious_t := 0.0
 var spawn_list := ""
 var spawn_index := 0
 var spawn_timer := 1.0
@@ -242,9 +244,8 @@ func make_materials() -> void:
 	mats.steel = std_mat(Color.WHITE, steel_tex, true)
 	mats.steel.metallic = 0.4
 	mats.steel.roughness = 0.35
-	mats.temp = std_mat(Color(0.75, 0.85, 1.0), steel_tex, true)
-	mats.temp.emission_enabled = true
-	mats.temp.emission = Color(0.1, 0.2, 0.35)
+	for t in ITEM_TYPES:
+		item_tex[t] = Icons.make(t, ITEM_INFO[t][1])
 	mats.water = std_mat(Color.WHITE, water_tex, true)
 	mats.water.roughness = 0.1
 	mats.ice = std_mat(Color(0.82, 0.9, 1.0), ice_tex, true)
@@ -401,7 +402,7 @@ func load_level(idx: int, start_play: bool) -> void:
 	blocks.clear()
 	enemies.clear()
 	items.clear()
-	temp_walls.clear()
+	amphibious_t = 0.0
 	enemy_spawns.clear()
 	player = null
 	level_idx = idx
@@ -464,7 +465,7 @@ func build_cell(c: Vector2i, ch: String) -> void:
 			make_block(c, ch)
 		"W":
 			add_mesh(box_mesh(Vector3(1, 0.06, 1)), mats.water, p + Vector3(0, 0.0, 0))
-			add_static(Vector3(1, 1.2, 1), p + Vector3(0, 0.6, 0), 2)
+			add_static(Vector3(1, 1.2, 1), p + Vector3(0, 0.6, 0), 8)
 		"G":
 			for i in 3:
 				var sm := SphereMesh.new()
@@ -531,8 +532,7 @@ func make_block(c: Vector2i, type: String) -> void:
 	mi.position.y = h / 2.0
 	match type:
 		"B": mi.material_override = mats.brick
-		"S": mi.material_override = mats.steel
-		_: mi.material_override = mats.temp
+		_: mi.material_override = mats.steel
 	body.add_child(mi)
 	body.set_meta("block", true)
 	body.set_meta("cell", c)
@@ -661,7 +661,7 @@ func damage_block(body, power: int) -> void:
 			mi.material_override = mats.brick_dmg
 			mi.scale.y = 0.75
 			mi.position.y = 0.3
-	elif (t == "S" or t == "T") and power >= 2:
+	elif t == "S" and power >= 2:
 		remove_block(c)
 
 
@@ -720,31 +720,36 @@ func spawn_item_random() -> void:
 	var node := Node3D.new()
 	level_root.add_child(node)
 	node.position = cell_center(c) + Vector3(0, 0.45, 0)
-	var m := std_mat(info[1])
-	m.emission_enabled = true
-	m.emission = info[1] * 0.5
-	add_mesh(box_mesh(Vector3(0.5, 0.5, 0.5)), m, Vector3.ZERO, node)
-	var lbl := Label3D.new()
-	lbl.text = info[0]
-	lbl.font_size = 64
-	lbl.pixel_size = 0.006
-	lbl.outline_size = 16
-	lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	lbl.no_depth_test = true
-	lbl.position = Vector3(0, 0.55, 0)
-	node.add_child(lbl)
-	items.append({"node": node, "type": type, "t": 0.0, "color": info[1]})
-	show_msg("ITEM DROPPED: " + info[0], 1.2)
+	var spr := Sprite3D.new()
+	spr.texture = item_tex[type]
+	spr.pixel_size = 0.85 / Icons.SIZE
+	spr.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	spr.shaded = false
+	spr.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+	spr.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	spr.position = Vector3(0, 0.15, 0)
+	node.add_child(spr)
+	var glow := CylinderMesh.new()
+	glow.top_radius = 0.42
+	glow.bottom_radius = 0.42
+	glow.height = 0.02
+	var gm := std_mat(Color(info[1].r, info[1].g, info[1].b, 0.45))
+	gm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	gm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var ring := add_mesh(glow, gm, cell_center(c) + Vector3(0, 0.02, 0))
+	items.append({"node": node, "ring": ring, "type": type, "t": 0.0, "color": info[1]})
+	show_msg("ITEM DROPPED!", 1.2)
 
 
 func update_items(delta: float) -> void:
 	for it in items.duplicate():
 		var node: Node3D = it.node
 		it.t += delta
-		node.rotation.y += delta * 2.0
 		node.position.y = 0.45 + sin(it.t * 3.0) * 0.08
 		node.visible = it.t < 11.0 or fmod(it.t, 0.3) < 0.18
+		it.ring.visible = node.visible
 		if it.t > 15.0:
+			it.ring.queue_free()
 			node.queue_free()
 			items.erase(it)
 			continue
@@ -753,6 +758,7 @@ func update_items(delta: float) -> void:
 			if d < 0.75:
 				apply_item(it.type)
 				explode_fx(node.global_position, 1.0, it.color)
+				it.ring.queue_free()
 				node.queue_free()
 				items.erase(it)
 
@@ -775,43 +781,22 @@ func apply_item(type: String) -> void:
 			for e in enemies.duplicate():
 				if is_instance_valid(e):
 					e.die()
-		"walls":
-			build_temp_walls()
+		"amphibious":
+			amphibious_t = 15.0
 		"radar":
 			radar_t = 15.0
 
 
-func build_temp_walls() -> void:
-	var pc := cell_of(player.global_position)
-	var f: Vector3 = player.facing
-	var front := Vector2i(int(signf(f.x)), 0) if absf(f.x) > absf(f.z) else Vector2i(0, int(signf(f.z)))
-	for dx in range(-1, 2):
-		for dz in range(-1, 2):
-			var d := Vector2i(dx, dz)
-			if d == Vector2i.ZERO or d == front:
-				continue
-			var c := pc + d
-			if c.x < 0 or c.y < 0 or c.x >= W or c.y >= H:
-				continue
-			if cells.get(c, "") != "." or enemy_spawns.has(c):
-				continue
-			var occupied := false
-			for e in enemies:
-				if is_instance_valid(e) and cell_of(e.global_position) == c:
-					occupied = true
-			if occupied:
-				continue
-			make_block(c, "T")
-			temp_walls.append({"cell": c, "t": 12.0})
-
-
-func update_temp_walls(delta: float) -> void:
-	for w in temp_walls.duplicate():
-		w.t -= delta
-		if w.t <= 0.0:
-			if cells.get(w.cell, "") == "T":
-				remove_block(w.cell)
-			temp_walls.erase(w)
+func update_amphibious(delta: float) -> void:
+	if player == null or not is_instance_valid(player):
+		return
+	amphibious_t = maxf(0.0, amphibious_t - delta)
+	# never switch it off while the tank is still on water: wait until it reaches land
+	var was_on: bool = (player.collision_mask & 8) == 0
+	if was_on and amphibious_t <= 0.0 and cells.get(cell_of(player.global_position), ".") == "W":
+		amphibious_t = 0.01
+	player.collision_mask = (1 | 2 | 4) if amphibious_t > 0.0 else (1 | 2 | 4 | 8)
+	player.floater.visible = amphibious_t > 0.0 and (amphibious_t > 3.0 or fmod(amphibious_t, 0.3) < 0.18)
 
 
 # ---------------------------------------------------------------- effects
@@ -873,7 +858,7 @@ func _process(delta: float) -> void:
 			radar_t = maxf(0.0, radar_t - delta)
 			update_spawning(delta)
 			update_items(delta)
-			update_temp_walls(delta)
+			update_amphibious(delta)
 		"dying":
 			state_t -= delta
 			if state_t <= 0.0:
@@ -939,8 +924,8 @@ func update_hud(delta: float) -> void:
 			lines.append("HIDDEN IN BUSH")
 	if freeze_t > 0.0:
 		lines.append("FREEZE %d" % ceili(freeze_t))
-	if not temp_walls.is_empty():
-		lines.append("WALLS %d" % ceili(temp_walls[0].t))
+	if amphibious_t > 0.0:
+		lines.append("AMPHIBIOUS %d" % ceili(amphibious_t))
 	hud_label.text = "\n".join(lines)
 
 

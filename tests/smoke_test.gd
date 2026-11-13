@@ -36,7 +36,20 @@ func _process(_d: float) -> bool:
 		main.player.global_position = main.items[0].node.global_position * Vector3(1, 0, 1) + Vector3(0, 0.05, 0)
 	if frame == 280:
 		check(main.items.is_empty(), "item picked up")
-	if frame > 300 and phase == 0:
+	if frame == 300:
+		# amphibious: drive north from the grass into the water at row 8
+		main.apply_item("amphibious")
+		main.player.global_position = Vector3(5.5, 0.05, 9.5)
+		main.player.velocity = Vector3.ZERO
+	if frame > 300 and frame < 318:
+		Input.action_press("move_up")
+	if frame == 318:
+		Input.action_release("move_up")
+		check(main.cells.get(main.cell_of(main.player.global_position)) == "W", "amphibious tank drives onto water (z=%.2f)" % main.player.global_position.z)
+		main.amphibious_t = 0.0
+	if frame == 340:
+		check(main.amphibious_t > 0.0, "amphibious stays on while still on water")
+	if frame > 400 and phase == 0:
 		if main.state == "playing" and frame % 30 == 0:
 			main.apply_item("bomb")
 			main.player.shield = 9999.0

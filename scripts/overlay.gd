@@ -24,7 +24,6 @@ func _draw() -> void:
 		match t:
 			"B": col = Color(0.8, 0.38, 0.22)
 			"S": col = Color(0.72, 0.74, 0.8)
-			"T": col = Color(0.9, 0.9, 1.0)
 			"W": col = Color(0.2, 0.45, 0.9)
 			"G": col = Color(0.12, 0.6, 0.22)
 			"I": col = Color(0.75, 0.92, 1.0)
@@ -38,7 +37,7 @@ func _draw() -> void:
 	for it in main.items:
 		if is_instance_valid(it.node) and fmod(tm, 0.5) < 0.32:
 			var ip: Vector3 = it.node.global_position
-			draw_rect(Rect2(o + Vector2(ip.x, ip.z) * CS - Vector2(3.5, 3.5), Vector2(7, 7)), it.color)
+			draw_texture_rect(main.item_tex[it.type], Rect2(o + Vector2(ip.x, ip.z) * CS - Vector2(7, 7), Vector2(14, 14)), false)
 	for e in main.enemies:
 		if not is_instance_valid(e):
 			continue
