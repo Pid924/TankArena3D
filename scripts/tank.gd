@@ -16,10 +16,12 @@ const KIND_COLORS := {
 	"hover": Color(0.2, 0.75, 0.8),
 	"miner": Color(0.45, 0.5, 0.2),
 	"thief": Color(0.95, 0.35, 0.7),
+	"flamer": Color(0.85, 0.22, 0.12),
+	"twin": Color(0.55, 0.62, 0.7),
 }
-const KIND_HP := {"basic": 1, "fast": 1, "heavy": 4, "artillery": 2, "stealth": 1, "hover": 2, "miner": 2, "thief": 1}
-const KIND_SPEED := {"basic": 3.0, "fast": 5.3, "heavy": 2.0, "artillery": 1.8, "stealth": 3.6, "hover": 3.4, "miner": 2.8, "thief": 4.2}
-const KIND_SCORE := {"basic": 100, "fast": 200, "heavy": 400, "artillery": 300, "stealth": 300, "hover": 250, "miner": 250, "thief": 300}
+const KIND_HP := {"basic": 1, "fast": 1, "heavy": 4, "artillery": 2, "stealth": 1, "hover": 2, "miner": 2, "thief": 1, "flamer": 2, "twin": 2}
+const KIND_SPEED := {"basic": 3.0, "fast": 5.3, "heavy": 2.0, "artillery": 1.8, "stealth": 3.6, "hover": 3.4, "miner": 2.8, "thief": 4.2, "flamer": 2.8, "twin": 2.6}
+const KIND_SCORE := {"basic": 100, "fast": 200, "heavy": 400, "artillery": 300, "stealth": 300, "hover": 250, "miner": 250, "thief": 300, "flamer": 350, "twin": 300}
 
 var main = null
 var is_player := false
@@ -59,6 +61,10 @@ var all_mats: Array = []
 var base_color := Color.WHITE
 var shield_mesh: MeshInstance3D
 var floater: MeshInstance3D
+var flame: Node3D
+var flame_own := false
+var flame_cycle := 2.0
+var flame_tick := 0.0
 
 
 func setup(m, player: bool, k: String, idx := 0) -> void:
@@ -181,6 +187,21 @@ func build_visual() -> void:
 			# grabber claw
 			add_box(Vector3(0.05, 0.05, 0.3), Vector3(-0.15, 0.25, -0.5), dark_mat)
 			add_box(Vector3(0.05, 0.05, 0.3), Vector3(0.15, 0.25, -0.5), dark_mat)
+		"flamer":
+			add_box(Vector3(0.2, 0.28, 0.95), Vector3(-0.34, 0.15, 0), track_mat)
+			add_box(Vector3(0.2, 0.28, 0.95), Vector3(0.34, 0.15, 0), track_mat)
+			add_box(Vector3(0.5, 0.25, 0.86), Vector3(0, 0.3, 0), hull_mat)
+			# fuel tanks and a wide nozzle
+			add_box(Vector3(0.16, 0.24, 0.4), Vector3(-0.12, 0.54, 0.18), mk_mat(Color(0.95, 0.8, 0.2)))
+			add_box(Vector3(0.16, 0.24, 0.4), Vector3(0.12, 0.54, 0.18), mk_mat(Color(0.95, 0.8, 0.2)))
+			add_box(Vector3(0.18, 0.14, 0.45), Vector3(0, 0.46, -0.32), dark_mat)
+		"twin":
+			add_box(Vector3(0.2, 0.28, 0.95), Vector3(-0.34, 0.15, 0), track_mat)
+			add_box(Vector3(0.2, 0.28, 0.95), Vector3(0.34, 0.15, 0), track_mat)
+			add_box(Vector3(0.5, 0.25, 0.86), Vector3(0, 0.3, 0), hull_mat)
+			add_box(Vector3(0.42, 0.2, 0.42), Vector3(0, 0.52, 0.0), top_mat)
+			add_box(Vector3(0.1, 0.1, 0.45), Vector3(0, 0.52, -0.38), dark_mat)
+			add_box(Vector3(0.1, 0.1, 0.45), Vector3(0, 0.52, 0.38), dark_mat)
 		_:
 			add_box(Vector3(0.2, 0.28, 0.95), Vector3(-0.34, 0.15, 0), track_mat)
 			add_box(Vector3(0.2, 0.28, 0.95), Vector3(0.34, 0.15, 0), track_mat)
@@ -219,6 +240,37 @@ func build_visual() -> void:
 	floater.position.y = 0.12
 	floater.visible = false
 	add_child(floater)
+	# flamethrower fireball, one cell in front of the barrel
+	flame = Node3D.new()
+	flame.position = Vector3(0, 0.42, -1.0)
+	for i in 3:
+		var fs := SphereMesh.new()
+		fs.radius = 0.46 - i * 0.11
+		fs.height = fs.radius * 2.0
+		fs.radial_segments = 10
+		fs.rings = 5
+		var fmi := MeshInstance3D.new()
+		fmi.mesh = fs
+		var fmat := StandardMaterial3D.new()
+		fmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		fmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		fmat.albedo_color = [Color(1.0, 0.25, 0.05, 0.55), Color(1.0, 0.55, 0.1, 0.75), Color(1.0, 0.95, 0.5, 0.95)][i]
+		fmi.material_override = fmat
+		fmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		flame.add_child(fmi)
+	# a short stream from the barrel to the fireball
+	var stream := MeshInstance3D.new()
+	var sbm := BoxMesh.new()
+	sbm.size = Vector3(0.14, 0.14, 0.6)
+	stream.mesh = sbm
+	var smat := StandardMaterial3D.new()
+	smat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	smat.albedo_color = Color(1.0, 0.6, 0.15)
+	stream.material_override = smat
+	stream.position = Vector3(0, 0, 0.45)
+	flame.add_child(stream)
+	flame.visible = false
+	visual.add_child(flame)
 
 
 func _physics_process(delta: float) -> void:
@@ -252,7 +304,42 @@ func _physics_process(delta: float) -> void:
 	if global_position.y < -3.0:
 		die()
 		return
+	update_flame(delta)
 	update_visual(delta)
+
+
+func has_flame() -> bool:
+	if is_player:
+		return main.flame_t > 0.0
+	if main.freeze_t > 0.0:
+		return false
+	return main.enemy_flame_t > 0.0 or (kind == "flamer" and flame_own)
+
+
+func update_flame(delta: float) -> void:
+	if kind == "flamer" and main.freeze_t <= 0.0:
+		flame_cycle -= delta
+		if flame_cycle <= 0.0:
+			flame_own = not flame_own
+			flame_cycle = randf_range(2.0, 3.5) if flame_own else randf_range(1.5, 3.5)
+	var on := has_flame()
+	flame.visible = on
+	if not on:
+		return
+	var k := randf_range(0.85, 1.15)
+	flame.scale = Vector3(k, randf_range(0.85, 1.15), k)
+	flame_tick -= delta
+	if flame_tick > 0.0:
+		return
+	flame_tick = 0.35
+	var c := global_position + facing * 1.0
+	var targets: Array = main.enemies.duplicate() if is_player else main.alive_players()
+	for t in targets:
+		if not is_instance_valid(t) or t.dead or t == self:
+			continue
+		var d := Vector2(t.global_position.x - c.x, t.global_position.z - c.z).length()
+		if d < 0.75 and absf(t.global_position.y - global_position.y) < 0.8:
+			t.take_hit(1)
 
 
 func ground_type() -> String:
@@ -319,10 +406,14 @@ func try_fire() -> void:
 		spd = 17.0 if weapon >= 1 else 12.0
 		max_b = 2 if weapon >= 2 else 1
 		power = 2 if weapon >= 3 else 1
+	if kind == "twin":
+		max_b = 2
 	if my_bullets.size() >= max_b:
 		return
 	fire_cd = 0.2 if is_player else 0.5
 	my_bullets.append(main.spawn_bullet(self, facing, spd, power))
+	if kind == "twin":
+		my_bullets.append(main.spawn_bullet(self, -facing, spd, power))
 	reveal_t = 0.8
 
 
@@ -475,8 +566,8 @@ func update_visual(delta: float) -> void:
 	if kind == "stealth":
 		var want := 0.07
 		var near: bool = main.nearest_player_dist(global_position) < 2.5
-		if reveal_t > 0.0 or main.radar_t > 0.0 or near:
-			want = 1.0 if main.radar_t <= 0.0 or reveal_t > 0.0 or near else 0.6
+		if reveal_t > 0.0 or near:
+			want = 1.0
 		alpha = lerpf(alpha, want, minf(1.0, 6.0 * delta))
 		for m in all_mats:
 			m.albedo_color.a = alpha

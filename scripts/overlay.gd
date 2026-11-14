@@ -34,54 +34,47 @@ func _draw() -> void:
 	var mh: float = main.H * CS
 	var o := Vector2(vp.x - mw - 16.0, 16.0)
 	draw_rect(Rect2(o - Vector2(5, 5), Vector2(mw + 10, mh + 10)), Color(0, 0, 0, 0.6))
-	if main.jam_t > 0.0:
-		# jammed by a thief: static noise
-		for i in 160:
-			var r := Vector2(randf() * mw, randf() * mh)
-			draw_rect(Rect2(o + r, Vector2(4, 2)), Color(1, 1, 1, randf() * 0.5))
-		draw_string(font, o + Vector2(0, mh / 2 + 8), main.tr_("no_signal"), HORIZONTAL_ALIGNMENT_CENTER, mw, 18, Color(1, 0.4, 0.4))
-	else:
-		draw_rect(Rect2(o, Vector2(mw, mh)), Color(0.3, 0.36, 0.24, 0.85))
-		for c in main.cells:
-			var t: String = main.cells[c]
-			var col := Color(0, 0, 0, 0)
-			match t:
-				"B": col = Color(0.8, 0.38, 0.22)
-				"S": col = Color(0.72, 0.74, 0.8)
-				"W": col = Color(0.2, 0.45, 0.9)
-				"G": col = Color(0.12, 0.6, 0.22)
-				"I": col = Color(0.75, 0.92, 1.0)
-				"H": col = Color(0.58, 0.52, 0.3)
-				">", "<", "^", "v": col = Color(0.48, 0.42, 0.28)
-			if col.a > 0.0:
-				draw_rect(Rect2(o + Vector2(c.x, c.y) * CS, Vector2(CS, CS)), col)
-		for sp2 in main.enemy_spawns:
-			draw_rect(Rect2(o + Vector2(sp2.x, sp2.y) * CS, Vector2(CS, CS)), Color(1, 0.3, 0.3, 0.35), false, 1.0)
-		for m in main.mines:
-			var mp: Vector3 = m.node.position
-			draw_circle(o + Vector2(mp.x, mp.z) * CS, 2.0, Color(1, 0.6, 0.1))
-		for it in main.items:
-			if is_instance_valid(it.node) and fmod(tm, 0.5) < 0.32:
-				var ip: Vector3 = it.node.global_position
-				draw_texture_rect(main.item_tex[it.type], Rect2(o + Vector2(ip.x, ip.z) * CS - Vector2(7, 7), Vector2(14, 14)), false)
-		for e in main.enemies:
-			if not is_instance_valid(e):
-				continue
-			if e.kind == "stealth" and main.radar_t <= 0.0:
-				continue
-			var ecol := Color(1, 0.22, 0.22)
-			if e.kind == "stealth":
-				ecol = Color(0.75, 0.4, 1.0)
-			elif e.kind == "thief":
-				ecol = Color(1.0, 0.45, 0.8)
-			if e.carrier and fmod(tm, 0.3) < 0.15:
-				ecol = Color(1, 1, 1)
-			draw_circle(o + Vector2(e.global_position.x, e.global_position.z) * CS, 3.5, ecol)
-		for pl in main.alive_players():
-			var pp := o + Vector2(pl.global_position.x, pl.global_position.z) * CS
-			var f := Vector2(pl.facing.x, pl.facing.z).normalized()
-			var side := Vector2(-f.y, f.x)
-			draw_colored_polygon(PackedVector2Array([pp + f * 6.0, pp - f * 4.0 + side * 4.0, pp - f * 4.0 - side * 4.0]), pl.base_color.lightened(0.3))
+	draw_rect(Rect2(o, Vector2(mw, mh)), Color(0.3, 0.36, 0.24, 0.85))
+	for c in main.cells:
+		var t: String = main.cells[c]
+		var col := Color(0, 0, 0, 0)
+		match t:
+			"B": col = Color(0.8, 0.38, 0.22)
+			"S": col = Color(0.72, 0.74, 0.8)
+			"W": col = Color(0.2, 0.45, 0.9)
+			"G": col = Color(0.12, 0.6, 0.22)
+			"I": col = Color(0.75, 0.92, 1.0)
+			"H": col = Color(0.58, 0.52, 0.3)
+			">", "<", "^", "v": col = Color(0.48, 0.42, 0.28)
+		if col.a > 0.0:
+			draw_rect(Rect2(o + Vector2(c.x, c.y) * CS, Vector2(CS, CS)), col)
+	for sp2 in main.enemy_spawns:
+		draw_rect(Rect2(o + Vector2(sp2.x, sp2.y) * CS, Vector2(CS, CS)), Color(1, 0.3, 0.3, 0.35), false, 1.0)
+	for m in main.mines:
+		var mp: Vector3 = m.node.position
+		draw_circle(o + Vector2(mp.x, mp.z) * CS, 2.0, Color(1, 0.6, 0.1))
+	for it in main.items:
+		if is_instance_valid(it.node) and fmod(tm, 0.5) < 0.32:
+			var ip: Vector3 = it.node.global_position
+			draw_texture_rect(main.item_tex[it.type], Rect2(o + Vector2(ip.x, ip.z) * CS - Vector2(7, 7), Vector2(14, 14)), false)
+	for e in main.enemies:
+		if not is_instance_valid(e):
+			continue
+		if e.kind == "stealth":
+			continue
+		var ecol := Color(1, 0.22, 0.22)
+		if e.kind == "stealth":
+			ecol = Color(0.75, 0.4, 1.0)
+		elif e.kind == "thief":
+			ecol = Color(1.0, 0.45, 0.8)
+		if e.carrier and fmod(tm, 0.3) < 0.15:
+			ecol = Color(1, 1, 1)
+		draw_circle(o + Vector2(e.global_position.x, e.global_position.z) * CS, 3.5, ecol)
+	for pl in main.alive_players():
+		var pp := o + Vector2(pl.global_position.x, pl.global_position.z) * CS
+		var f := Vector2(pl.facing.x, pl.facing.z).normalized()
+		var side := Vector2(-f.y, f.x)
+		draw_colored_polygon(PackedVector2Array([pp + f * 6.0, pp - f * 4.0 + side * 4.0, pp - f * 4.0 - side * 4.0]), pl.base_color.lightened(0.3))
 	# HP pips per player
 	if not playing:
 		return

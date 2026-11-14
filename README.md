@@ -5,8 +5,8 @@ Everything (tanks, walls, effects, textures) is generated in code from primitive
 
 ## How to play
 
-Five levels, 20 enemy tanks each. Each player can take **3 hits**. Before every level a briefing screen shows which enemies are coming and what they do.
-The menu has 1-player and 2-player modes, a start-level picker and four languages (Thai, English, German, Dutch).
+Ten levels, 20 enemy tanks each. New enemy types are introduced gradually: tough tanks from level 1, hovercraft from level 5, twin guns from level 6, flamers from level 7 and item thieves only from level 8. Each player can take **3 hits**. Before every level a briefing screen shows which enemies are coming and what they do.
+The menu has 1-player and 2-player modes, a start-level picker and four languages (Thai, English, German, Dutch) picked with flag buttons.
 
 | | Player 1 | Player 2 |
 |---|---|---|
@@ -34,12 +34,14 @@ Every item affects both players.
 | Racer (orange) | Very fast, fast bullets |
 | Bulwark (purple) | Slow, 4 HP |
 | Mortar (brown) | Lobs shells over walls at your position (red circle) |
-| Ghost (dark blue) | Nearly invisible, hidden from the minimap without radar |
+| Ghost (dark blue) | Nearly invisible and hidden from the minimap; shows up when close or when it fires |
 | Hovercraft (teal) | Crosses water |
 | Mine Layer (olive) | Drops visible landmines that last 8 s; driving over one costs 1 HP |
+| Twin Gun (steel blue) | Fires forward and backward at the same time |
+| Flamer (red) | Switches a flamethrower on and off at random; the fireball one cell in front hurts you |
 | Thief (pink) | Drives to items and steals them; a stolen item has the opposite effect on you |
 
-Tanks #3, 7, 11, 15 and 19 flash red and drop an item when hit. Later tanks in each wave have more HP (+1 from #8, +2 from #15, +1 more in levels 4 and 5).
+Tanks #3, 7, 11, 15 and 19 flash red and drop an item when hit. Later tanks in each wave have more HP (+1 from #8, +2 from #15, +1 more from level 5 and +2 from level 9).
 
 ### Items
 | Icon | Item | If a thief steals it |
@@ -50,7 +52,7 @@ Tanks #3, 7, 11, 15 and 19 flash red and drop an item when hit. Later tanks in e
 | Snowflake | Enemies frozen 8 s | You are frozen 3 s |
 | Bomb | Destroys all enemies on the field | The blast hits you |
 | Tank on waves | Drive across water 15 s | Enemies cross water 12 s |
-| Radar | Reveals stealth tanks 15 s | Minimap jammed 12 s |
+| Flame | Flamethrower 7 s: a fireball one cell in front burns enemies (you can still shoot) | All enemies get flamethrowers 7 s |
 | Lightning | Speed boost 10 s | Enemies faster 10 s |
 | Hourglass | Enemies slowed 10 s | You are slowed 6 s |
 

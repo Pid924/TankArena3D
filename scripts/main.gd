@@ -19,7 +19,7 @@ const THAI_FONT = preload("res://fonts/NotoSansThai.ttf")
 #  o hovercraft, m mine layer, t thief
 const LEVELS := [
 	{
-		"enemies": "bbfbtbbfbbtbfbbbtbfb",
+		"enemies": "bhbfbhbbfhbbhfbbhbfh",
 		"map": [
 			"E.........E.........E",
 			"..BB..BB.....BB..BB..",
@@ -41,7 +41,7 @@ const LEVELS := [
 		],
 	},
 	{
-		"enemies": "bfhobtbfohbtbfhobtfb",
+		"enemies": "bfahbbfahbfbahbfhbab",
 		"map": [
 			"E.........E.........E",
 			"....BB.........BB....",
@@ -63,7 +63,7 @@ const LEVELS := [
 		],
 	},
 	{
-		"enemies": "bfambhotbfmabhoftmab",
+		"enemies": "bmfahbmfbahmbfmhabfb",
 		"map": [
 			"E.........E.........E",
 			"..BBB...........BBB..",
@@ -85,7 +85,7 @@ const LEVELS := [
 		],
 	},
 	{
-		"enemies": "bsfmsohtbsamfsohtsmb",
+		"enemies": "bsfmahsbfmhsabfsmhbs",
 		"map": [
 			"E.........E.........E",
 			"...GG...........GG...",
@@ -107,7 +107,51 @@ const LEVELS := [
 		],
 	},
 	{
-		"enemies": "fhsamotbfhsamotfhsam",
+		"enemies": "obsfoamhbofsmoahbfso",
+		"map": [
+			"E.........E.........E",
+			"..BB.....BBB.....BB..",
+			".....................",
+			".WWWWW.WWWWWWW.WWWWW.",
+			".WGGGW.W.....W.WGGGW.",
+			".WGGGW.W.BSB.W.WGGGW.",
+			".WWWWW.W.....W.WWWWW.",
+			".......WWW.WWW.......",
+			"..SS.............SS..",
+			".WWWWW..BB.BB..WWWWW.",
+			".W.B.W.........W.B.W.",
+			".WWWWW..GGGGG..WWWWW.",
+			".......WW...WW.......",
+			"..BB...WG...GW...BB..",
+			"..BB...WW...WW...BB..",
+			"..........P..........",
+			".....BB.......BB.....",
+		],
+	},
+	{
+		"enemies": "wbfowsahwmbofwshawbo",
+		"map": [
+			"E.........E.........E",
+			".BB.BB.BB...BB.BB.BB.",
+			".BB.BB.BB...BB.BB.BB.",
+			"WWWWWWW..WWW..WWWWWWW",
+			".....................",
+			".SS.BB.BB...BB.BB.SS.",
+			".SS.BB.BB.G.BB.BB.SS.",
+			"WWWWW..WWWWWWW..WWWWW",
+			".....................",
+			".BB.BB.BB...BB.BB.BB.",
+			".BB.BB.BB.S.BB.BB.BB.",
+			"WWWW...WWWWWWW...WWWW",
+			"GG.................GG",
+			"GG..BBB.......BBB..GG",
+			"....B...........B....",
+			"..........P..........",
+			"WWW...............WWW",
+		],
+	},
+	{
+		"enemies": "rwbofrsamhrwofbsrahw",
 		"map": [
 			"E.........E.........E",
 			"...S.....BBB.....S...",
@@ -128,10 +172,76 @@ const LEVELS := [
 			"GGG...............GGG",
 		],
 	},
+	{
+		"enemies": "tbrowtfsamhrtowbfstr",
+		"map": [
+			"E.........E.........E",
+			"...BB.....W.....BB...",
+			"..........W..........",
+			"WWWW..BB..W..BB..WWWW",
+			"...W......W......W...",
+			"...W..SS.....SS..W...",
+			"GG.W......W......W.GG",
+			"GG.WWWW...W...WWWW.GG",
+			"..........W..........",
+			"..BB..BB..W..BB..BB..",
+			"..........W..........",
+			"WWWWW.....W.....WWWWW",
+			"...G..BB.....BB..G...",
+			"...G.............G...",
+			"..SS..B..BBB..B..SS..",
+			"..........P..........",
+			"GGG.......W.......GGG",
+		],
+	},
+	{
+		"enemies": "frwtohsamtrwofhsatmr",
+		"map": [
+			"E.........E.........E",
+			"IIIIIIIIIIIIIIIIIIIII",
+			"IBBIIWWWWIIIWWWWIIBBI",
+			"IIIIIWGGWIIIWGGWIIIII",
+			"IISSIWWWWIBIWWWWISSII",
+			"IIIIIIIIIBBBIIIIIIIII",
+			"WWWWWII.......IIWWWWW",
+			"WWWWWI..BB.BB..IWWWWW",
+			"......I.......I......",
+			"..BB..IIIIIIIII..BB..",
+			".....................",
+			"GG..WWWW.....WWWW..GG",
+			"GG..WGGW..S..WGGW..GG",
+			"....WWWW.....WWWW....",
+			"..SS....BB.BB....SS..",
+			"..........P..........",
+			"WWWW.............WWWW",
+		],
+	},
+	{
+		"enemies": "hrwtosamfhrwtosamfrh",
+		"map": [
+			"E.........E.........E",
+			"..SS.....SSS.....SS..",
+			".....................",
+			"WWWW.HHHHHHHHHHH.WWWW",
+			"W..W.H....B....H.W..W",
+			"W.GW.H.SS...SS.H.WG.W",
+			"W..W>H....v....H<W..W",
+			"WWWW.HHHHHHHHHHH.WWWW",
+			"..........^..........",
+			"..BB.WWW.....WWW.BB..",
+			"..BB.WGW.BBB.WGW.BB..",
+			".....WWW.....WWW.....",
+			"IIII.............IIII",
+			"IIII..BB..S..BB..IIII",
+			"..S...B.......B...S..",
+			"..........P..........",
+			"GGG....WWW.WWW....GGG",
+		],
+	},
 ]
 
-const ITEM_TYPES := ["star", "shield", "heart", "freeze", "bomb", "amphibious", "radar", "speed", "slow"]
-const ITEM_WEIGHTS := {"star": 3, "shield": 2, "heart": 2, "freeze": 2, "bomb": 1, "amphibious": 3, "radar": 1, "speed": 2, "slow": 2}
+const ITEM_TYPES := ["star", "shield", "heart", "freeze", "bomb", "amphibious", "flame", "speed", "slow"]
+const ITEM_WEIGHTS := {"star": 3, "shield": 2, "heart": 2, "freeze": 2, "bomb": 1, "amphibious": 3, "flame": 2, "speed": 2, "slow": 2}
 const ITEM_COLORS := {
 	"star": Color(1.0, 0.85, 0.2),
 	"shield": Color(0.3, 0.8, 1.0),
@@ -139,12 +249,12 @@ const ITEM_COLORS := {
 	"freeze": Color(0.7, 0.95, 1.0),
 	"bomb": Color(1.0, 0.45, 0.1),
 	"amphibious": Color(0.3, 0.7, 1.0),
-	"radar": Color(0.4, 1.0, 0.5),
+	"flame": Color(1.0, 0.4, 0.1),
 	"speed": Color(1.0, 0.6, 0.1),
 	"slow": Color(0.75, 0.55, 1.0),
 }
-const ENEMY_KINDS := {"b": "basic", "f": "fast", "h": "heavy", "a": "artillery", "s": "stealth", "o": "hover", "m": "miner", "t": "thief"}
-const KIND_ORDER := ["basic", "fast", "heavy", "artillery", "stealth", "hover", "miner", "thief"]
+const ENEMY_KINDS := {"b": "basic", "f": "fast", "h": "heavy", "a": "artillery", "s": "stealth", "o": "hover", "m": "miner", "t": "thief", "r": "flamer", "w": "twin"}
+const KIND_ORDER := ["basic", "fast", "heavy", "artillery", "stealth", "hover", "miner", "twin", "flamer", "thief"]
 const CARRIER_SLOTS := [2, 6, 10, 14, 18]
 const MAX_ON_FIELD := 4
 const MAX_HP := 5
@@ -182,7 +292,7 @@ var lang := "th"
 
 # timed effects (players' items)
 var freeze_t := 0.0
-var radar_t := 0.0
+var flame_t := 0.0
 var amphibious_t := 0.0
 var speed_t := 0.0
 var slow_t := 0.0
@@ -192,7 +302,7 @@ var enemy_fast_t := 0.0
 var enemy_amph_t := 0.0
 var player_slow_t := 0.0
 var player_freeze_t := 0.0
-var jam_t := 0.0
+var enemy_flame_t := 0.0
 
 var msg_t := 0.0
 var touch_vec := Vector2.ZERO
@@ -210,6 +320,7 @@ var ui_font: Font
 var mats := {}
 var mesh_cache := {}
 var item_tex := {}
+var flag_tex := {}
 
 
 func _ready() -> void:
@@ -342,6 +453,8 @@ func make_materials() -> void:
 	mats.steel.roughness = 0.35
 	for t in ITEM_TYPES:
 		item_tex[t] = Icons.make(t, ITEM_COLORS[t])
+	for code in I18n.LANGS:
+		flag_tex[code] = Icons.flag(code)
 	mats.water = std_mat(Color.WHITE, water_tex, true)
 	mats.water.roughness = 0.1
 	mats.ice = std_mat(Color(0.82, 0.9, 1.0), ice_tex, true)
@@ -458,7 +571,7 @@ func menu_text(text: String, size: int, col := Color.WHITE) -> Label:
 	l.add_theme_color_override("font_color", col)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size.x = 640
+	l.custom_minimum_size.x = 860
 	menu_box.add_child(l)
 	return l
 
@@ -492,10 +605,27 @@ func show_title() -> void:
 	menu_button(tr_("btn_level") % (start_level + 1), func():
 		start_level = (start_level + 1) % LEVELS.size()
 		show_title())
-	menu_button(tr_("btn_lang") % I18n.LANG_NAMES[lang], func():
-		lang = I18n.LANGS[(I18n.LANGS.find(lang) + 1) % I18n.LANGS.size()]
-		save_settings()
-		show_title())
+	# language picker: one flag button per language
+	var flags := HBoxContainer.new()
+	flags.alignment = BoxContainer.ALIGNMENT_CENTER
+	flags.add_theme_constant_override("separation", 14)
+	for code in I18n.LANGS:
+		var fb := TextureButton.new()
+		fb.texture_normal = flag_tex[code]
+		fb.ignore_texture_size = true
+		fb.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+		fb.custom_minimum_size = Vector2(72, 48)
+		fb.tooltip_text = I18n.LANG_NAMES[code]
+		fb.modulate = Color.WHITE if code == lang else Color(0.55, 0.55, 0.55)
+		if code == lang:
+			fb.scale = Vector2(1.12, 1.12)
+			fb.pivot_offset = Vector2(36, 24)
+		fb.pressed.connect(func():
+			lang = code
+			save_settings()
+			show_title())
+		flags.add_child(fb)
+	menu_box.add_child(flags)
 	menu_text(tr_("controls_1p") + "\n" + tr_("controls_2p"), 15, Color(0.8, 0.85, 0.9))
 	focus_first_button.call_deferred()
 
@@ -522,7 +652,7 @@ func show_briefing(idx: int) -> void:
 		counts[k] = counts.get(k, 0) + 1
 		max_hp[k] = maxi(max_hp.get(k, 0), TankScript.KIND_HP[k] + hp_bonus(i))
 	var grid := GridContainer.new()
-	grid.columns = 2
+	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 14)
 	grid.add_theme_constant_override("v_separation", 6)
 	for k in KIND_ORDER:
@@ -530,16 +660,16 @@ func show_briefing(idx: int) -> void:
 			continue
 		var sw := ColorRect.new()
 		sw.color = TankScript.KIND_COLORS[k]
-		sw.custom_minimum_size = Vector2(30, 30)
+		sw.custom_minimum_size = Vector2(26, 26)
 		sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		grid.add_child(sw)
 		var base_hp: int = TankScript.KIND_HP[k]
 		var hp_txt := str(base_hp) if base_hp == max_hp[k] else "%d-%d" % [base_hp, max_hp[k]]
 		var l := Label.new()
 		l.text = "%s  %s  %s\n%s" % [tr_("name_" + k), tr_("brief_count") % counts[k], tr_("brief_hp") % hp_txt, tr_("desc_" + k)]
-		l.add_theme_font_size_override("font_size", 16)
+		l.add_theme_font_size_override("font_size", 15)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.custom_minimum_size.x = 600
+		l.custom_minimum_size.x = 400
 		grid.add_child(l)
 	var gc := CenterContainer.new()
 	gc.add_child(grid)
@@ -674,7 +804,7 @@ func player_speed_mult() -> float:
 
 func hp_bonus(spawn_i: int) -> int:
 	# later tanks in a wave are tougher; the last levels add a bit more
-	return int(spawn_i / 7) + (1 if level_idx >= 3 else 0)
+	return int(spawn_i / 7) + int(level_idx / 4)
 
 
 func box_mesh(size: Vector3) -> BoxMesh:
@@ -748,7 +878,7 @@ func load_level(idx: int) -> void:
 	kills = 0
 	spawn_timer = 1.5
 	freeze_t = 0.0
-	radar_t = 0.0
+	flame_t = 0.0
 	amphibious_t = 0.0
 	speed_t = 0.0
 	slow_t = 0.0
@@ -757,7 +887,7 @@ func load_level(idx: int) -> void:
 	enemy_amph_t = 0.0
 	player_slow_t = 0.0
 	player_freeze_t = 0.0
-	jam_t = 0.0
+	enemy_flame_t = 0.0
 	cam_focus = cell_center(player_spawn)
 
 
@@ -1207,9 +1337,8 @@ func apply_item(type: String) -> void:
 					e.die()
 		"amphibious":
 			amphibious_t = 15.0
-		"radar":
-			radar_t = 15.0
-			jam_t = 0.0
+		"flame":
+			flame_t = 7.0
 		"speed":
 			speed_t = 10.0
 			player_slow_t = 0.0
@@ -1241,9 +1370,8 @@ func steal_item(type: String) -> void:
 				p.take_hit(1)
 		"amphibious":
 			enemy_amph_t = 12.0
-		"radar":
-			jam_t = 12.0
-			radar_t = 0.0
+		"flame":
+			enemy_flame_t = 7.0
 		"speed":
 			enemy_fast_t = 10.0
 			slow_t = 0.0
@@ -1254,7 +1382,7 @@ func steal_item(type: String) -> void:
 
 func update_timers(delta: float) -> void:
 	freeze_t = maxf(0.0, freeze_t - delta)
-	radar_t = maxf(0.0, radar_t - delta)
+	flame_t = maxf(0.0, flame_t - delta)
 	amphibious_t = maxf(0.0, amphibious_t - delta)
 	speed_t = maxf(0.0, speed_t - delta)
 	slow_t = maxf(0.0, slow_t - delta)
@@ -1263,7 +1391,7 @@ func update_timers(delta: float) -> void:
 	enemy_amph_t = maxf(0.0, enemy_amph_t - delta)
 	player_slow_t = maxf(0.0, player_slow_t - delta)
 	player_freeze_t = maxf(0.0, player_freeze_t - delta)
-	jam_t = maxf(0.0, jam_t - delta)
+	enemy_flame_t = maxf(0.0, enemy_flame_t - delta)
 
 
 # ---------------------------------------------------------------- effects
@@ -1371,7 +1499,7 @@ func update_hud(delta: float) -> void:
 				lines.append(("P%d " % (p.player_idx + 1) if num_players == 2 else "") + tr_("hud_hidden"))
 	var timers := [
 		[freeze_t, "hud_freeze"], [slow_t, "hud_slow"], [speed_t, "hud_speed"], [amphibious_t, "hud_amph"],
-		[radar_t, "hud_radar"], [jam_t, "hud_jam"], [enemy_shield_t, "hud_eshield"], [enemy_fast_t, "hud_efast"],
+		[flame_t, "hud_flame"], [enemy_flame_t, "hud_eflame"], [enemy_shield_t, "hud_eshield"], [enemy_fast_t, "hud_efast"],
 		[enemy_amph_t, "hud_eamph"], [player_slow_t, "hud_pslow"], [player_freeze_t, "hud_pfrozen"],
 	]
 	for t in timers:

@@ -7,6 +7,7 @@ var errors: Array = []
 var phase := 0
 var p1
 var p2
+var flame_victim
 
 
 func _initialize() -> void:
@@ -55,9 +56,9 @@ func _process(_d: float) -> bool:
 		# thief reverse effects
 		main.steal_item("star")
 		check(p1.weapon == 1, "stolen star downgrades weapon")
-		main.steal_item("radar")
-		check(main.jam_t > 0.0, "stolen radar jams minimap")
-		main.jam_t = 0.0
+		main.steal_item("flame")
+		check(main.enemy_flame_t > 0.0, "stolen flamethrower arms the enemies")
+		main.enemy_flame_t = 0.0
 		main.spawn_mine(Vector3(15.5, 0, 16.5))
 		check(main.mines.size() == 1, "mine placed")
 	if frame == 300:
@@ -86,6 +87,16 @@ func _process(_d: float) -> bool:
 		main.enemies.append(th)
 	if frame == 360:
 		check(main.enemy_fast_t > 0.0, "thief steals speed item: enemies get faster")
+		main.apply_item("flame")
+		p2.facing = Vector3(0, 0, -1)
+		var vic = main.TankScript.new()
+		main.level_root.add_child(vic)
+		vic.setup(main, false, "basic")
+		vic.global_position = p2.global_position + Vector3(0, 0, -1.0)
+		main.enemies.append(vic)
+		flame_victim = vic
+	if frame == 380:
+		check(not is_instance_valid(flame_victim) or flame_victim.dead, "player flamethrower burns the enemy in front")
 	if frame > 400 and phase == 0:
 		if main.state == "playing" and frame % 30 == 0:
 			main.apply_item("bomb")

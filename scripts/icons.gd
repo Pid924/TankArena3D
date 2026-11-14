@@ -127,6 +127,12 @@ static func symbol(type: String, u: float, v: float) -> Color:
 				var wy := -0.3 - k * 0.38 + sin(u * 6.0 + k * 1.5) * 0.1
 				if absf(v - wy) < 0.09 and absf(u) < 0.95:
 					return Color(0.55, 0.85, 1.0)
+		"flame":
+			# fire drop: round bottom, pointed top, yellow core
+			var body := Vector2(u, v + 0.3).length() < 0.58 or (v > -0.3 and v < 0.95 and absf(u) < 0.58 * (1.0 - (v + 0.3) / 1.25))
+			if body:
+				var core := Vector2(u, v + 0.42).length() < 0.32 or (v > -0.42 and v < 0.45 and absf(u) < 0.32 * (1.0 - (v + 0.42) / 0.87))
+				return Color(1.0, 0.92, 0.35) if core else Color(1.0, 0.35, 0.08)
 		"speed":
 			# lightning bolt
 			var bolt := PackedVector2Array([Vector2(0.15, 0.95), Vector2(-0.55, -0.05), Vector2(-0.05, -0.05), Vector2(-0.2, -0.95), Vector2(0.55, 0.1), Vector2(0.05, 0.1)])
@@ -148,3 +154,47 @@ static func symbol(type: String, u: float, v: float) -> Color:
 					return white
 				return Color(0.75, 0.9, 1.0, 1.0)
 	return Color(0, 0, 0, 0)
+
+
+static func flag(code: String) -> ImageTexture:
+	var w := 72
+	var h := 48
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	for y in h:
+		for x in w:
+			var fx := (x + 0.5) / w
+			var fy := (y + 0.5) / h
+			var c := Color.WHITE
+			match code:
+				"th":
+					var band := fy * 6.0
+					if band < 1.0 or band >= 5.0:
+						c = Color(0.65, 0.1, 0.2)
+					elif band >= 2.0 and band < 4.0:
+						c = Color(0.18, 0.18, 0.42)
+				"de":
+					c = Color(0.05, 0.05, 0.05) if fy < 1.0 / 3.0 else (Color(0.87, 0.0, 0.0) if fy < 2.0 / 3.0 else Color(1.0, 0.8, 0.0))
+				"nl":
+					c = Color(0.68, 0.11, 0.16) if fy < 1.0 / 3.0 else (Color.WHITE if fy < 2.0 / 3.0 else Color(0.13, 0.27, 0.55))
+				"en":
+					# simplified Union Jack
+					c = Color(0.0, 0.14, 0.49)
+					var px := fx * 2.0
+					var py := fy
+					var d1 := absf(px * 1.0 - py * 2.0) / sqrt(5.0)
+					var d2 := absf((2.0 - px) * 1.0 - py * 2.0) / sqrt(5.0)
+					var dd := minf(d1, d2)
+					if dd < 0.1:
+						c = Color.WHITE
+					if dd < 0.035:
+						c = Color(0.78, 0.06, 0.18)
+					var cx := absf(fx - 0.5)
+					var cy := absf(fy - 0.5)
+					if cx < 0.085 or cy < 0.17:
+						c = Color.WHITE
+					if cx < 0.05 or cy < 0.1:
+						c = Color(0.78, 0.06, 0.18)
+			if x == 0 or y == 0 or x == w - 1 or y == h - 1:
+				c = Color(0.1, 0.1, 0.1)
+			img.set_pixel(x, y, c)
+	return ImageTexture.create_from_image(img)
