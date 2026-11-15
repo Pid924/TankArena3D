@@ -332,6 +332,7 @@ func update_flame(delta: float) -> void:
 	if flame_tick > 0.0:
 		return
 	flame_tick = 0.35
+	main.sfx.play("flame", -6.0 if is_player else -12.0, 0.15)
 	var c := global_position + facing * 1.0
 	var targets: Array = main.enemies.duplicate() if is_player else main.alive_players()
 	for t in targets:
@@ -411,6 +412,7 @@ func try_fire() -> void:
 	if my_bullets.size() >= max_b:
 		return
 	fire_cd = 0.2 if is_player else 0.5
+	main.sfx.play("shoot_p" if is_player else "shoot_e", -4.0 if is_player else -11.0)
 	my_bullets.append(main.spawn_bullet(self, facing, spd, power))
 	if kind == "twin":
 		my_bullets.append(main.spawn_bullet(self, -facing, spd, power))
@@ -526,6 +528,8 @@ func take_hit(power: int) -> void:
 			flash_t = 0.05
 			return
 		flash_t = 0.12
+		if hp - power > 0:
+			main.sfx.play("clank", -6.0)
 		if carrier:
 			carrier = false
 			main.spawn_item_random()

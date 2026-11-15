@@ -9,6 +9,7 @@ const OverlayScript = preload("res://scripts/overlay.gd")
 const Icons = preload("res://scripts/icons.gd")
 const I18n = preload("res://scripts/i18n.gd")
 const THAI_FONT = preload("res://fonts/NotoSansThai.ttf")
+const SfxScript = preload("res://scripts/sfx.gd")
 
 # Map legend:
 #  .  floor        B  brick (breakable)     S  steel (needs max weapon)
@@ -289,6 +290,8 @@ var carry_weapon := 0
 var state := "title"
 var state_t := 0.0
 var lang := "th"
+var sfx: Node
+var sound_on := true
 
 # timed effects (players' items)
 var freeze_t := 0.0
@@ -331,6 +334,9 @@ func _ready() -> void:
 	make_materials()
 	setup_world()
 	setup_hud()
+	sfx = SfxScript.new()
+	add_child(sfx)
+	sfx.set_muted(not sound_on)
 	load_level(0)
 	show_title()
 
@@ -343,6 +349,7 @@ func load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS_PATH) == OK:
 		lang = cfg.get_value("game", "lang", "th")
+		sound_on = cfg.get_value("game", "sound", true)
 	if not I18n.LANGS.has(lang):
 		lang = "th"
 
@@ -350,6 +357,7 @@ func load_settings() -> void:
 func save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("game", "lang", lang)
+	cfg.set_value("game", "sound", sound_on)
 	cfg.save(SETTINGS_PATH)
 
 
@@ -582,6 +590,7 @@ func menu_button(text: String, cb: Callable) -> Button:
 	b.add_theme_font_size_override("font_size", 24)
 	b.custom_minimum_size = Vector2(380, 50)
 	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	b.pressed.connect(func(): sfx.play("click", -4.0))
 	b.pressed.connect(cb)
 	menu_box.add_child(b)
 	return b
@@ -625,8 +634,18 @@ func show_title() -> void:
 			save_settings()
 			show_title())
 		flags.add_child(fb)
+	# sound on/off
+	var snd := TextureButton.new()
+	snd.texture_normal = Icons.speaker(sound_on)
+	snd.ignore_texture_size = true
+	snd.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	snd.custom_minimum_size = Vector2(48, 48)
+	snd.pressed.connect(func():
+		toggle_sound()
+		show_title())
+	flags.add_child(snd)
 	menu_box.add_child(flags)
-	menu_text(tr_("controls_1p") + "\n" + tr_("controls_2p"), 15, Color(0.8, 0.85, 0.9))
+	menu_text(tr_("controls_1p") + "\n" + tr_("controls_2p") + "\n" + tr_("controls_mute"), 15, Color(0.8, 0.85, 0.9))
 	focus_first_button.call_deferred()
 
 
@@ -682,7 +701,15 @@ func show_briefing(idx: int) -> void:
 	focus_first_button.call_deferred()
 
 
+func toggle_sound() -> void:
+	sound_on = not sound_on
+	sfx.set_muted(not sound_on)
+	save_settings()
+	sfx.play("click")
+
+
 func begin_level() -> void:
+	sfx.play("level_start")
 	hide_menu()
 	spawn_players()
 	state = "playing"
@@ -690,6 +717,7 @@ func begin_level() -> void:
 
 
 func show_game_over() -> void:
+	sfx.play("game_over")
 	state = "gameover"
 	clear_menu()
 	menu_root.visible = true
@@ -706,6 +734,7 @@ func show_game_over() -> void:
 
 
 func show_victory() -> void:
+	sfx.play("victory")
 	state = "victory"
 	clear_menu()
 	menu_root.visible = true
@@ -1068,6 +1097,7 @@ func update_spawning(delta: float) -> void:
 	spawn_index += 1
 	spawn_timer = 2.2
 	explode_fx(pos + Vector3(0, 0.3, 0), 1.2, Color(1, 1, 1, 0.6))
+	sfx.play("spawn", -10.0)
 
 
 func spawn_bullet(shooter, dir: Vector3, spd: float, power: int) -> Node3D:
@@ -1108,6 +1138,7 @@ func spawn_shell(shooter, target: Vector3) -> void:
 	s.marker = add_mesh(cm, mats.marker, target + Vector3(0, 0.05, 0))
 	level_root.add_child(s)
 	s.global_position = s.start
+	sfx.play("whistle", -6.0)
 
 
 func spawn_mine(pos: Vector3) -> void:
@@ -1131,6 +1162,7 @@ func spawn_mine(pos: Vector3) -> void:
 	light.height = 0.1
 	var lm := add_mesh(light, mats.mine_light, Vector3(0, 0.1, 0), node)
 	mines.append({"node": node, "light": lm, "cell": c, "t": 8.0})
+	sfx.play("mine", -8.0)
 
 
 func update_mines(delta: float) -> void:
@@ -1147,6 +1179,7 @@ func update_mines(delta: float) -> void:
 			explode_fx(node.position + Vector3(0, 0.2, 0), 1.4, Color(1, 0.5, 0.15))
 			shake = 0.3
 			show_msg(tr_("msg_mine"), 1.0)
+			sfx.play("boom", -2.0)
 			hit.take_hit(1)
 		if hit != null or m.t <= 0.0:
 			node.queue_free()
@@ -1159,6 +1192,8 @@ func bullet_hit(b, collider, pos: Vector3) -> void:
 	explode_fx(pos, 0.45, Color(1, 0.9, 0.5))
 	if collider == null:
 		return
+	if not collider.has_meta("tank") and not collider.has_meta("block"):
+		sfx.play("hit", -10.0)
 	if collider.has_meta("tank"):
 		if collider.is_player != b.from_player:
 			collider.take_hit(b.power)
@@ -1171,6 +1206,7 @@ func damage_block(body, power: int) -> void:
 	var t: String = cells.get(c, ".")
 	if t == "B":
 		var hp: int = body.get_meta("hp") - (2 if power >= 2 else 1)
+		sfx.play("brick", -6.0 if hp > 0 else -2.0)
 		if hp <= 0:
 			remove_block(c)
 		else:
@@ -1180,11 +1216,15 @@ func damage_block(body, power: int) -> void:
 			mi.scale.y = 0.75
 			mi.position.y = 0.3
 	elif t == "S" and power >= 2:
+		sfx.play("brick", -2.0)
 		remove_block(c)
+	elif t == "S":
+		sfx.play("steel", -8.0)
 
 
 func artillery_impact(pos: Vector3) -> void:
 	explode_fx(pos + Vector3(0, 0.3, 0), 2.2, Color(1, 0.5, 0.15))
+	sfx.play("boom", -4.0)
 	shake = 0.25
 	for p in alive_players():
 		var d := Vector2(p.global_position.x - pos.x, p.global_position.z - pos.z).length()
@@ -1200,11 +1240,13 @@ func artillery_impact(pos: Vector3) -> void:
 
 func on_player_hit(p) -> void:
 	shake = 0.35
+	sfx.play("player_hit")
 	show_msg(tr_("msg_hit") % [p.player_idx + 1, p.hp], 1.0)
 
 
 func on_tank_destroyed(t) -> void:
 	explode_fx(t.global_position + Vector3(0, 0.4, 0), 1.8, Color(1, 0.6, 0.2))
+	sfx.play("explode", 0.0 if t.is_player else -3.0)
 	if t.is_player:
 		shake = 0.6
 		if num_players == 2:
@@ -1224,6 +1266,7 @@ func on_tank_destroyed(t) -> void:
 			carry_hp[p.player_idx] = p.hp
 			carry_weapon = p.weapon
 		show_msg(tr_("msg_clear"), 3.5)
+		sfx.play("level_clear")
 
 
 # ---------------------------------------------------------------- items
@@ -1273,6 +1316,7 @@ func spawn_item_random(force_type := "") -> void:
 	var ring := add_mesh(glow, gm, cell_center(c) + Vector3(0, 0.02, 0))
 	items.append({"node": node, "ring": ring, "type": type, "t": 0.0, "color": col})
 	show_msg(tr_("msg_drop"), 1.2)
+	sfx.play("item_drop", -3.0)
 
 
 func remove_item(it: Dictionary) -> void:
@@ -1315,6 +1359,11 @@ func update_items(delta: float) -> void:
 func apply_item(type: String) -> void:
 	show_msg(tr_("item_" + type) if type != "star" else "", 1.8)
 	score += 50
+	sfx.play("pickup")
+	if type == "freeze":
+		sfx.play("freeze", -2.0)
+	elif type == "bomb":
+		sfx.play("boom")
 	match type:
 		"star":
 			var lv := 0
@@ -1350,6 +1399,7 @@ func apply_item(type: String) -> void:
 func steal_item(type: String) -> void:
 	# A thief picked up the item: the effect turns against the players.
 	show_msg(tr_("steal_" + type), 2.2)
+	sfx.play("steal")
 	shake = 0.2
 	match type:
 		"star":
@@ -1510,6 +1560,12 @@ func update_hud(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_M:
+		toggle_sound()
+		if state == "title":
+			show_title()
+		elif state == "playing":
+			show_msg(tr_("sound_on") if sound_on else tr_("sound_off"), 0.8)
 	if state != "playing":
 		touch_id = -1
 		fire_id = -1

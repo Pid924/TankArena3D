@@ -56,6 +56,10 @@ Tanks #3, 7, 11, 15 and 19 flash red and drop an item when hit. Later tanks in e
 | Lightning | Speed boost 10 s | Enemies faster 10 s |
 | Hourglass | Enemies slowed 10 s | You are slowed 6 s |
 
+## Sound
+
+All sound effects and jingles are synthesized in code at startup (`scripts/sfx.gd`), so there are no audio files. Press **M** (or the speaker button on the title screen) to turn sound on or off; the choice is remembered.
+
 ## Development
 
 Open the folder in Godot 4.3 and press F5. Levels are text maps at the top of `scripts/main.gd` (legend in the comments), so adding a level means adding a new entry to `LEVELS` and a `lv_N` name in `scripts/i18n.gd`. All game text lives in `scripts/i18n.gd`. Thai text uses Noto Sans Thai (`fonts/`, SIL Open Font License).

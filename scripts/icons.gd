@@ -198,3 +198,29 @@ static func flag(code: String) -> ImageTexture:
 				c = Color(0.1, 0.1, 0.1)
 			img.set_pixel(x, y, c)
 	return ImageTexture.create_from_image(img)
+
+
+static func speaker(on: bool) -> ImageTexture:
+	var n := 48
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	for y in n:
+		for x in n:
+			var u := (x + 0.5) / n * 2.0 - 1.0
+			var v := (y + 0.5) / n * 2.0 - 1.0
+			var c := Color(0, 0, 0, 0)
+			if Vector2(u, v).length() < 0.98:
+				c = Color(0.1, 0.12, 0.15, 0.85)
+			# speaker body + cone
+			if (u > -0.6 and u < -0.3 and absf(v) < 0.2) or (u >= -0.3 and u < 0.05 and absf(v) < 0.2 + (u + 0.3) * 1.3):
+				c = Color.WHITE
+			if on:
+				var r := Vector2(u - 0.0, v).length()
+				if u > 0.12 and (absf(r - 0.38) < 0.06 or absf(r - 0.62) < 0.06) and absf(v) < u * 1.2:
+					c = Color(0.5, 1.0, 0.7)
+			else:
+				var a := absf((u - 0.48) - v)
+				var b2 := absf((u - 0.48) + v)
+				if (a < 0.08 or b2 < 0.08) and absf(u - 0.48) < 0.28 and absf(v) < 0.28:
+					c = Color(1.0, 0.35, 0.35)
+			img.set_pixel(x, y, c)
+	return ImageTexture.create_from_image(img)
