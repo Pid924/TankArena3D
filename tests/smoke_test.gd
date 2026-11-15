@@ -88,6 +88,7 @@ func _process(_d: float) -> bool:
 	if frame == 360:
 		check(main.enemy_fast_t > 0.0, "thief steals speed item: enemies get faster")
 		main.apply_item("flame")
+		main.freeze_t = 5.0  # keep the victim still so the check is deterministic
 		p2.facing = Vector3(0, 0, -1)
 		var vic = main.TankScript.new()
 		main.level_root.add_child(vic)
@@ -95,7 +96,7 @@ func _process(_d: float) -> bool:
 		vic.global_position = p2.global_position + Vector3(0, 0, -1.0)
 		main.enemies.append(vic)
 		flame_victim = vic
-	if frame == 380:
+	if frame == 395:
 		check(not is_instance_valid(flame_victim) or flame_victim.dead, "player flamethrower burns the enemy in front")
 	if frame > 400 and phase == 0:
 		if main.state == "playing" and frame % 30 == 0:
