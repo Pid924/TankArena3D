@@ -91,3 +91,5 @@ func _draw() -> void:
 			var c2 := Vector2(x0 + i * 24, y)
 			draw_circle(c2, 10.0, Color(0, 0, 0, 0.6))
 			draw_circle(c2, 8.0, Color(1.0, 0.28, 0.35) if filled else Color(0.3, 0.3, 0.3))
+		if pl.is_bot:
+			draw_string(font, Vector2(x0 + maxi(pl.hp, 3) * 24 - 4, y + 7), "CPU", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.6, 0.9, 1.0))

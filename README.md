@@ -56,13 +56,20 @@ Tanks #3, 7, 11, 15 and 19 flash red and drop an item when hit. Later tanks in e
 | Lightning | Speed boost 10 s | Enemies faster 10 s |
 | Hourglass | Enemies slowed 10 s | You are slowed 6 s |
 
-## Watch the CPU play
+## Human or CPU players
 
-Pick **WATCH CPU (2 PLAYERS)** on the title screen and the computer drives both
-player tanks: it finds a path to the nearest enemy or item, shoots through brick
-walls, and fires at enemies lined up on its row or column. It starts at the level
-chosen with "Start at level". Press any key or click to go back to the menu.
+On the title screen, **Player 1** can be HUMAN or CPU and **Player 2** can be OFF,
+HUMAN or CPU (the choice is remembered). A CPU tank finds a path to the nearest
+enemy or item, shoots through brick walls, fires at enemies lined up on its row or
+column, and shoots down enemy bullets flying at it. When only one human plays,
+both key sets and touch control that human's tank. With no human players the game
+runs as a demo: press any key or click to go back to the menu.
 Headless check: `godot --headless --fixed-fps 60 --script res://tests/demo_test.gd -- <level index> <seconds>`.
+
+## Bullets
+
+A player bullet and an enemy bullet that meet cancel each other out, so you can
+shoot back at incoming fire.
 
 ## Sound
 

@@ -8,6 +8,8 @@ var phase := 0
 var p1
 var p2
 var flame_victim
+var clash_a
+var clash_b
 
 
 func _initialize() -> void:
@@ -39,6 +41,18 @@ func _process(_d: float) -> bool:
 		p1 = main.players[0]
 		p2 = main.players[1]
 		god_mode()
+	if frame == 100:
+		# a player bullet and an enemy bullet flying at each other cancel out
+		var c := Vector3(10.5, 5.0, 8.5)
+		clash_a = main.spawn_bullet(p1, Vector3(1, 0, 0), 12.0, 1)
+		clash_a.shooter_rid = RID()
+		clash_a.global_position = c - Vector3(1.5, 0, 0)
+		clash_b = main.spawn_bullet(p1, Vector3(-1, 0, 0), 12.0, 1)
+		clash_b.shooter_rid = RID()
+		clash_b.from_player = false
+		clash_b.global_position = c + Vector3(1.5, 0, 0)
+	if frame == 115:
+		check(not is_instance_valid(clash_a) and not is_instance_valid(clash_b), "player and enemy bullets cancel each other")
 	if frame == 200:
 		check(main.enemies.size() > 0, "enemies spawned")
 		for t in main.ITEM_TYPES:

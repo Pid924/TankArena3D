@@ -285,7 +285,8 @@ var score := 0
 var level_idx := 0
 var start_level := 0
 var num_players := 1
-var demo := false  # computer drives both players
+var demo := false  # no human players: the computer drives every tank, any key exits
+var p_mode := ["human", "off"]  # per player: "human", "cpu" or "off" (P2 only)
 var carry_hp := [3, 3]
 var carry_weapon := 0
 var state := "title"
@@ -351,6 +352,11 @@ func load_settings() -> void:
 	if cfg.load(SETTINGS_PATH) == OK:
 		lang = cfg.get_value("game", "lang", "th")
 		sound_on = cfg.get_value("game", "sound", true)
+		p_mode = [cfg.get_value("game", "p1", "human"), cfg.get_value("game", "p2", "off")]
+	if not ["human", "cpu"].has(p_mode[0]):
+		p_mode[0] = "human"
+	if not ["human", "cpu", "off"].has(p_mode[1]):
+		p_mode[1] = "off"
 	if not I18n.LANGS.has(lang):
 		lang = "th"
 
@@ -359,6 +365,8 @@ func save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("game", "lang", lang)
 	cfg.set_value("game", "sound", sound_on)
+	cfg.set_value("game", "p1", p_mode[0])
+	cfg.set_value("game", "p2", p_mode[1])
 	cfg.save(SETTINGS_PATH)
 
 
@@ -604,18 +612,32 @@ func focus_first_button() -> void:
 			return
 
 
-func show_title() -> void:
+func human_count() -> int:
+	var n := 0
+	for i in num_players:
+		if p_mode[i] == "human":
+			n += 1
+	return n
+
+
+func show_title(focus_idx := 0) -> void:
 	state = "title"
 	clear_menu()
 	menu_root.visible = true
 	menu_text("TANK ARENA 3D", 44, Color(0.5, 1.0, 0.75))
 	menu_text(tr_("title_tag"), 20)
-	menu_button(tr_("btn_1p"), func(): start_game(1))
-	menu_button(tr_("btn_2p"), func(): start_game(2))
-	menu_button(tr_("btn_demo"), func(): start_game(2, true))
+	menu_button(tr_("btn_play"), func(): start_game())
+	menu_button(tr_("p_slot") % [1, tr_("mode_" + p_mode[0])], func():
+		p_mode[0] = "cpu" if p_mode[0] == "human" else "human"
+		save_settings()
+		show_title(1))
+	menu_button(tr_("p_slot") % [2, tr_("mode_" + p_mode[1])], func():
+		p_mode[1] = {"off": "human", "human": "cpu", "cpu": "off"}[p_mode[1]]
+		save_settings()
+		show_title(2))
 	menu_button(tr_("btn_level") % (start_level + 1), func():
 		start_level = (start_level + 1) % LEVELS.size()
-		show_title())
+		show_title(3))
 	# language picker: one flag button per language
 	var flags := HBoxContainer.new()
 	flags.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -648,12 +670,27 @@ func show_title() -> void:
 	flags.add_child(snd)
 	menu_box.add_child(flags)
 	menu_text(tr_("controls_1p") + "\n" + tr_("controls_2p") + "\n" + tr_("controls_mute"), 15, Color(0.8, 0.85, 0.9))
-	focus_first_button.call_deferred()
+	focus_button.call_deferred(focus_idx)
 
 
-func start_game(n: int, watch := false) -> void:
-	num_players = n
-	demo = watch
+func focus_button(idx: int) -> void:
+	var n := 0
+	for c in menu_box.get_children():
+		if c is Button:
+			if n == idx:
+				c.grab_focus()
+				return
+			n += 1
+
+
+## n/watch are shortcuts used by tests; the menu uses the P1/P2 settings.
+func start_game(n := 0, watch := false) -> void:
+	if n == 1:
+		p_mode = ["human", "off"]
+	elif n == 2:
+		p_mode = ["cpu", "cpu"] if watch else ["human", "human"]
+	num_players = 1 if p_mode[1] == "off" else 2
+	demo = human_count() == 0
 	score = 0
 	carry_hp = [3, 3]
 	carry_weapon = 0
@@ -1079,6 +1116,7 @@ func spawn_players() -> void:
 		var p = TankScript.new()
 		level_root.add_child(p)
 		p.setup(self, true, "player", i)
+		p.is_bot = p_mode[i] == "cpu"
 		p.global_position = cell_center(spots[i]) + Vector3(0, 0.05, 0)
 		p.hp = carry_hp[i]
 		p.max_hp = MAX_HP
@@ -1206,6 +1244,16 @@ func update_mines(delta: float) -> void:
 
 
 # ---------------------------------------------------------------- combat
+
+## A player bullet and an enemy bullet that meet cancel each other out.
+func bullets_clash(a, b) -> void:
+	a.dead = true
+	b.dead = true
+	explode_fx((a.global_position + b.global_position) * 0.5, 0.6, Color(1, 1, 0.8))
+	sfx.play("hit", -6.0)
+	a.queue_free()
+	b.queue_free()
+
 
 func bullet_hit(b, collider, pos: Vector3) -> void:
 	explode_fx(pos, 0.45, Color(1, 0.9, 0.5))

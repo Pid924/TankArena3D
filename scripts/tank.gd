@@ -25,6 +25,7 @@ const KIND_SCORE := {"basic": 100, "fast": 200, "heavy": 400, "artillery": 300, 
 
 var main = null
 var is_player := false
+var is_bot := false  # player tank driven by the computer
 var player_idx := 0
 var kind := "basic"
 var hp := 1
@@ -66,7 +67,7 @@ var flame_own := false
 var flame_cycle := 2.0
 var flame_tick := 0.0
 
-# bot state (player tanks driven by the computer in demo mode)
+# bot state (player tanks driven by the computer)
 var bot_path: Array = []
 var bot_t := 0.0
 var bot_stuck := 0.0
@@ -375,7 +376,7 @@ func update_water_pass() -> void:
 func read_move() -> Vector2:
 	var pre := "p%d_" % (player_idx + 1)
 	var v := Vector2(Input.get_axis(pre + "left", pre + "right"), Input.get_axis(pre + "up", pre + "down"))
-	if main.num_players == 1:
+	if main.human_count() == 1:
 		v += Vector2(Input.get_axis("p2_left", "p2_right"), Input.get_axis("p2_up", "p2_down"))
 		if main.touch_vec.length() > 0.2:
 			v = main.touch_vec
@@ -386,13 +387,13 @@ func read_fire() -> bool:
 	var pre := "p%d_" % (player_idx + 1)
 	if Input.is_action_pressed(pre + "fire"):
 		return true
-	return main.num_players == 1 and (Input.is_action_pressed("p2_fire") or main.touch_fire)
+	return main.human_count() == 1 and (Input.is_action_pressed("p2_fire") or main.touch_fire)
 
 
 func player_update(delta: float) -> void:
 	var mv := Vector2.ZERO
 	var want_fire := false
-	if main.demo:
+	if is_bot:
 		var b := bot_control(delta)
 		mv = b[0]
 		want_fire = b[1]
@@ -413,7 +414,7 @@ func player_update(delta: float) -> void:
 		try_fire()
 
 
-# ---------------------------------------------------------------- bot (demo mode)
+# ---------------------------------------------------------------- bot (computer-driven player)
 
 ## Cost of driving into a cell, or -1 when the bot cannot get through it.
 func bot_cost(c: Vector2i) -> int:
@@ -546,6 +547,19 @@ func bot_aim() -> Vector3:
 		if not blocked:
 			bd = absf(to.x) + absf(to.z)
 			best = d
+	# shoot down enemy bullets flying at us along our row or column
+	for o in get_tree().get_nodes_in_group("bullets"):
+		if o.dead or o.from_player:
+			continue
+		var to: Vector3 = o.global_position - global_position
+		if to.dot(o.dir) >= 0.0 or absf(to.x) + absf(to.z) > minf(bd, 8.0):
+			continue
+		if absf(to.x) < 0.4:
+			best = Vector3(0, 0, signf(to.z))
+			bd = absf(to.z)
+		elif absf(to.z) < 0.4:
+			best = Vector3(signf(to.x), 0, 0)
+			bd = absf(to.x)
 	return best
 
 
