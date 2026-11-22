@@ -285,6 +285,7 @@ var score := 0
 var level_idx := 0
 var start_level := 0
 var num_players := 1
+var demo := false  # computer drives both players
 var carry_hp := [3, 3]
 var carry_weapon := 0
 var state := "title"
@@ -611,6 +612,7 @@ func show_title() -> void:
 	menu_text(tr_("title_tag"), 20)
 	menu_button(tr_("btn_1p"), func(): start_game(1))
 	menu_button(tr_("btn_2p"), func(): start_game(2))
+	menu_button(tr_("btn_demo"), func(): start_game(2, true))
 	menu_button(tr_("btn_level") % (start_level + 1), func():
 		start_level = (start_level + 1) % LEVELS.size()
 		show_title())
@@ -649,8 +651,9 @@ func show_title() -> void:
 	focus_first_button.call_deferred()
 
 
-func start_game(n: int) -> void:
+func start_game(n: int, watch := false) -> void:
 	num_players = n
+	demo = watch
 	score = 0
 	carry_hp = [3, 3]
 	carry_weapon = 0
@@ -697,7 +700,11 @@ func show_briefing(idx: int) -> void:
 	if num_players == 2:
 		notes += "\n" + tr_("brief_shared")
 	menu_text(notes, 15, Color(1.0, 0.75, 0.75))
-	menu_button(tr_("btn_start"), func(): begin_level())
+	if demo:
+		menu_text(tr_("demo_exit"), 16, Color(0.6, 0.9, 1.0))
+		state_t = 4.0
+	else:
+		menu_button(tr_("btn_start"), func(): begin_level())
 	focus_first_button.call_deferred()
 
 
@@ -723,6 +730,11 @@ func show_game_over() -> void:
 	menu_root.visible = true
 	menu_text(tr_("gameover"), 44, Color(1.0, 0.4, 0.4))
 	menu_text(tr_("score") % score, 22)
+	if demo:
+		state_t = 5.0
+		menu_button(tr_("btn_menu"), func(): end_demo())
+		focus_first_button.call_deferred()
+		return
 	menu_button(tr_("btn_retry"), func():
 		carry_hp = [3, 3]
 		carry_weapon = 0
@@ -733,6 +745,12 @@ func show_game_over() -> void:
 	focus_first_button.call_deferred()
 
 
+func end_demo() -> void:
+	demo = false
+	load_level(0)
+	show_title()
+
+
 func show_victory() -> void:
 	sfx.play("victory")
 	state = "victory"
@@ -740,6 +758,7 @@ func show_victory() -> void:
 	menu_root.visible = true
 	menu_text(tr_("victory"), 44, Color(1.0, 0.85, 0.3))
 	menu_text(tr_("victory_body") % score, 22)
+	state_t = 5.0
 	menu_button(tr_("btn_menu"), func():
 		load_level(0)
 		show_title())
@@ -1493,6 +1512,16 @@ func _process(delta: float) -> void:
 			state_t -= delta
 			if state_t <= 0.0:
 				show_game_over()
+		"brief":
+			if demo:
+				state_t -= delta
+				if state_t <= 0.0:
+					begin_level()
+		"gameover", "victory":
+			if demo:
+				state_t -= delta
+				if state_t <= 0.0:
+					end_demo()
 		"clear":
 			state_t -= delta
 			if state_t <= 0.0:
@@ -1555,6 +1584,8 @@ func update_hud(delta: float) -> void:
 	for t in timers:
 		if t[0] > 0.0:
 			lines.append(tr_(t[1]) % ceili(t[0]))
+	if demo:
+		lines.append(tr_("demo_exit"))
 	hud_label.position.y = 40.0 if num_players == 1 else 66.0
 	hud_label.text = "\n".join(lines)
 
@@ -1566,6 +1597,19 @@ func _input(event: InputEvent) -> void:
 			show_title()
 		elif state == "playing":
 			show_msg(tr_("sound_on") if sound_on else tr_("sound_off"), 0.8)
+	# in demo mode any key (except M), click or touch goes back to the title
+	if demo and state != "title":
+		var quit := false
+		if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode != KEY_M:
+			quit = true
+		elif (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
+			quit = true
+		elif event is InputEventJoypadButton and event.pressed:
+			quit = true
+		if quit:
+			get_viewport().set_input_as_handled()
+			end_demo.call_deferred()
+			return
 	if state != "playing":
 		touch_id = -1
 		fire_id = -1

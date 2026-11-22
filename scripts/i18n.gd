@@ -28,6 +28,8 @@ const T := {
 	"controls_mute": {"en": "M: sound on/off", "th": "M: เปิด/ปิดเสียง", "de": "M: Ton an/aus", "nl": "M: geluid aan/uit"},
 	"btn_1p": {"en": "1 PLAYER", "th": "เล่น 1 คน", "de": "1 SPIELER", "nl": "1 SPELER"},
 	"btn_2p": {"en": "2 PLAYERS", "th": "เล่น 2 คน", "de": "2 SPIELER", "nl": "2 SPELERS"},
+	"btn_demo": {"en": "WATCH CPU (2 PLAYERS)", "th": "ดูคอมเล่น 2 คน", "de": "CPU ZUSEHEN (2 SPIELER)", "nl": "CPU KIJKEN (2 SPELERS)"},
+	"demo_exit": {"en": "CPU DEMO - press any key or click to exit", "th": "โหมดดูคอมเล่น - กดปุ่มใดก็ได้หรือคลิกเพื่อออก", "de": "CPU-DEMO - beliebige Taste oder Klick zum Beenden", "nl": "CPU-DEMO - druk op een toets of klik om te stoppen"},
 	"btn_level": {"en": "START AT LEVEL: %d", "th": "เริ่มที่ด่าน: %d", "de": "START IN LEVEL: %d", "nl": "BEGIN BIJ LEVEL: %d"},
 	"btn_start": {"en": "START", "th": "เริ่มเลย", "de": "LOS", "nl": "START"},
 	"btn_retry": {"en": "RETRY", "th": "เล่นด่านนี้ใหม่", "de": "NOCHMAL", "nl": "OPNIEUW"},

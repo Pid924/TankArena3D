@@ -66,6 +66,14 @@ var flame_own := false
 var flame_cycle := 2.0
 var flame_tick := 0.0
 
+# bot state (player tanks driven by the computer in demo mode)
+var bot_path: Array = []
+var bot_t := 0.0
+var bot_stuck := 0.0
+var bot_jiggle := 0.0
+var bot_jdir := Vector2.ZERO
+var bot_target = null
+
 
 func setup(m, player: bool, k: String, idx := 0) -> void:
 	main = m
@@ -382,7 +390,15 @@ func read_fire() -> bool:
 
 
 func player_update(delta: float) -> void:
-	var mv := read_move()
+	var mv := Vector2.ZERO
+	var want_fire := false
+	if main.demo:
+		var b := bot_control(delta)
+		mv = b[0]
+		want_fire = b[1]
+	else:
+		mv = read_move()
+		want_fire = read_fire()
 	if main.player_freeze_t > 0.0:
 		mv = Vector2.ZERO
 	var inp := Vector3(mv.x, 0, mv.y)
@@ -393,8 +409,196 @@ func player_update(delta: float) -> void:
 	var h := Vector3(velocity.x, 0, velocity.z).lerp(inp * spd, minf(1.0, acc * delta))
 	velocity.x = h.x
 	velocity.z = h.z
-	if read_fire() and main.player_freeze_t <= 0.0:
+	if want_fire and main.player_freeze_t <= 0.0:
 		try_fire()
+
+
+# ---------------------------------------------------------------- bot (demo mode)
+
+## Cost of driving into a cell, or -1 when the bot cannot get through it.
+func bot_cost(c: Vector2i) -> int:
+	var t: String = main.cells.get(c, "#")
+	var cost := 1
+	match t:
+		".", "G", "I", "H", ">", "<", "^", "v":
+			pass
+		"B":
+			cost = 4
+		"S":
+			if weapon < 3:
+				return -1
+			cost = 6
+		"W":
+			if main.amphibious_t < 2.0:
+				return -1
+		_:
+			return -1
+	for m in main.mines:
+		if m.cell == c:
+			cost += 25
+	return cost
+
+
+## Can a tank drive from cell a into the neighbouring cell b? Uses ground
+## height on both sides of the shared edge: driving down is fine, up is not.
+func bot_step_ok(a: Vector2i, b: Vector2i) -> bool:
+	var d := Vector3(b.x - a.x, 0, b.y - a.y)
+	var edge: Vector3 = main.cell_center(a) + d * 0.5
+	var ha: float = main.ground_height(edge.x - d.x * 0.05, edge.z - d.z * 0.05)
+	var hb: float = main.ground_height(edge.x + d.x * 0.05, edge.z + d.z * 0.05)
+	return hb <= ha + 0.1
+
+
+func bot_plan() -> void:
+	var start: Vector2i = main.cell_of(global_position)
+	var dist := {start: 0}
+	var prev := {}
+	var buckets := {0: [start]}
+	var cur := 0
+	var left := 1
+	while left > 0 and cur < 3000:
+		if buckets.has(cur):
+			var list: Array = buckets[cur]
+			buckets.erase(cur)
+			for c in list:
+				left -= 1
+				if dist[c] != cur:
+					continue
+				for d in DIRS:
+					var n := Vector2i(c.x + int(d.x), c.y + int(d.z))
+					var k := bot_cost(n)
+					if k < 0 or not bot_step_ok(c, n):
+						continue
+					var nd: int = cur + k
+					if nd < int(dist.get(n, 1 << 30)):
+						dist[n] = nd
+						prev[n] = c
+						if not buckets.has(nd):
+							buckets[nd] = []
+						buckets[nd].append(n)
+						left += 1
+		cur += 1
+	# pick a goal: items are worth a detour, enemies are the main target
+	var goal = null
+	var best := 1 << 30
+	var other = null
+	for p in main.alive_players():
+		if p != self:
+			other = p.bot_target
+	for it in main.items:
+		var c: Vector2i = main.cell_of(it.node.global_position)
+		if dist.has(c) and dist[c] - 8 < best:
+			best = dist[c] - 8
+			goal = c
+			bot_target = null
+	for e in main.enemies:
+		if not is_instance_valid(e) or e.dead:
+			continue
+		var c: Vector2i = main.cell_of(e.global_position)
+		if not dist.has(c):
+			continue
+		var v: int = dist[c] + (6 if e == other else 0)
+		if v < best:
+			best = v
+			goal = c
+			bot_target = e
+	if goal == null:
+		bot_target = null
+		for c in main.enemy_spawns:
+			var n: Vector2i = c + Vector2i(0, 2)
+			if dist.has(n) and dist[n] < best:
+				best = dist[n]
+				goal = n
+	bot_path.clear()
+	if goal == null:
+		return
+	var c: Vector2i = goal
+	while c != start and prev.has(c):
+		bot_path.push_front(c)
+		c = prev[c]
+
+
+## Direction to an enemy that is lined up on a row or column (and not behind
+## steel we cannot break), or ZERO.
+func bot_aim() -> Vector3:
+	var best := Vector3.ZERO
+	var bd := 13.0
+	for e in main.enemies:
+		if not is_instance_valid(e) or e.dead:
+			continue
+		var to: Vector3 = e.global_position - global_position
+		var d := Vector3.ZERO
+		if absf(to.x) < 0.5 and absf(to.z) < bd:
+			d = Vector3(0, 0, signf(to.z))
+		elif absf(to.z) < 0.5 and absf(to.x) < bd:
+			d = Vector3(signf(to.x), 0, 0)
+		else:
+			continue
+		var steps := int(absf(to.x) + absf(to.z))
+		var c: Vector2i = main.cell_of(global_position)
+		var blocked := false
+		for i in steps:
+			c += Vector2i(int(d.x), int(d.z))
+			var t: String = main.cells.get(c, "#")
+			if (t == "S" and weapon < 3) or t == "H":
+				blocked = true
+				break
+		if not blocked:
+			bd = absf(to.x) + absf(to.z)
+			best = d
+	return best
+
+
+func bot_control(delta: float) -> Array:
+	bot_t -= delta
+	if bot_t <= 0.0 or bot_path.is_empty():
+		bot_t = 0.4
+		bot_plan()
+	var mv := Vector2.ZERO
+	var fire := false
+	var here: Vector2i = main.cell_of(global_position)
+	while not bot_path.is_empty() and bot_path[0] == here:
+		bot_path.pop_front()
+	if not bot_path.is_empty():
+		var n: Vector2i = bot_path[0]
+		var to: Vector3 = main.cell_center(n) - global_position
+		var t: String = main.cells.get(n, ".")
+		if t == "B" or t == "S":
+			# wall in the way: square up to it and shoot it down
+			var dir := Vector3(n.x - here.x, 0, n.y - here.y)
+			var lane: Vector3 = main.cell_center(here) - global_position
+			lane.y = 0.0
+			var perp: Vector3 = lane - dir * lane.dot(dir)
+			var m3: Vector3 = dir * 0.25 + perp * 2.0
+			mv = Vector2(m3.x, m3.z)
+			if facing.dot(dir) > 0.9:
+				fire = true
+		else:
+			mv = Vector2(to.x, to.z).normalized()
+	var aim := bot_aim()
+	if aim != Vector3.ZERO:
+		if facing.dot(aim) > 0.9:
+			fire = true
+		elif main.flame_t <= 0.0:
+			mv = Vector2(aim.x, aim.z) * 0.2
+	# unstick: if we want to move but are not moving, wiggle sideways briefly
+	if bot_jiggle > 0.0:
+		bot_jiggle -= delta
+		mv = bot_jdir
+		fire = true
+	else:
+		var rv := get_real_velocity()
+		if mv.length() > 0.5 and Vector2(rv.x, rv.z).length() < 0.4:
+			bot_stuck += delta
+			if bot_stuck > 0.6:
+				bot_stuck = 0.0
+				bot_jiggle = 0.35
+				var d: Vector3 = DIRS[randi() % 4]
+				bot_jdir = Vector2(d.x, d.z)
+				bot_t = 0.0
+		else:
+			bot_stuck = 0.0
+	return [mv.limit_length(1.0), fire]
 
 
 func try_fire() -> void:

@@ -56,6 +56,14 @@ Tanks #3, 7, 11, 15 and 19 flash red and drop an item when hit. Later tanks in e
 | Lightning | Speed boost 10 s | Enemies faster 10 s |
 | Hourglass | Enemies slowed 10 s | You are slowed 6 s |
 
+## Watch the CPU play
+
+Pick **WATCH CPU (2 PLAYERS)** on the title screen and the computer drives both
+player tanks: it finds a path to the nearest enemy or item, shoots through brick
+walls, and fires at enemies lined up on its row or column. It starts at the level
+chosen with "Start at level". Press any key or click to go back to the menu.
+Headless check: `godot --headless --fixed-fps 60 --script res://tests/demo_test.gd -- <level index> <seconds>`.
+
 ## Sound
 
 All sound effects and jingles are synthesized in code at startup (`scripts/sfx.gd`), so there are no audio files. Press **M** (or the speaker button on the title screen) to turn sound on or off; the choice is remembered.
